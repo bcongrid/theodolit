@@ -4,84 +4,149 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Theodolit der GWFM</title>
-<!-- Web-Theodolit (Entwurf 11.11.2026). Kamera + Kompass in Gon, Messprotokoll.
+<!-- Web-Theodolit (Entwurf 11.11.2026, Gestaltung 2: Messing-Okular). Kamera + Kompass in Gon, Messprotokoll.
      Stationen liegen verschlüsselt in stationen.js; Schlüssel steht hinter # in der Adresse (aus der Cartridge).
-     Braucht HTTPS (oder localhost). Kein Server, nichts wird gesendet. -->
+     Braucht HTTPS (oder localhost). Kein Server, nichts wird gesendet. Alle Namen frei erfunden. -->
 <style>
-:root{--messing:#c9a24a;--messing-dunkel:#8a6a22;--papier:#f4ecd6;--tinte:#2b2418;--gruen:#7fd16a;--rot:#e0624f;--bg:#14110c}
+:root{--messing:#d4ad55;--messing-hell:#f6dc96;--messing-dunkel:#7a5a1c;--papier:#f3e7c8;--tinte:#2b2418;--gruen:#9be07f;--rot:#c8442f;--leder:#1b130b}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--papier);font:16px/1.35 "Courier New",Courier,monospace;overflow:hidden}
-#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#222 repeating-linear-gradient(0deg,#2a2620 0 1px,transparent 1px 40px),repeating-linear-gradient(90deg,#2a2620 0 1px,transparent 1px 40px)}
-#okular{position:fixed;inset:0;pointer-events:none}
-#band{position:fixed;top:env(safe-area-inset-top,0);left:0;right:0;height:46px;background:rgba(20,17,12,.78);border-bottom:2px solid var(--messing);overflow:hidden}
-#band canvas{width:100%;height:100%}
-#kopf{position:fixed;top:calc(env(safe-area-inset-top,0) + 50px);left:12px;right:12px;display:flex;justify-content:space-between;font-size:12px;color:var(--messing);text-shadow:0 1px 2px #000}
-#unten{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0));background:linear-gradient(transparent,rgba(20,17,12,.92) 30%)}
-#anzeige{display:flex;align-items:baseline;justify-content:center;gap:10px}
-#gon{font-size:44px;font-weight:bold;color:var(--papier);letter-spacing:1px;text-shadow:0 2px 4px #000}
-#einheit{color:var(--messing)}
-#hoehe{text-align:center;font-size:13px;color:#cbbf9f}
-#meldung{min-height:22px;text-align:center;margin:6px 0;font-size:14px}
-#meldung.gut{color:var(--gruen)} #meldung.station{color:var(--messing)}
-.knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-button{font:inherit;font-size:15px;border:2px solid var(--messing);background:#2a2216;color:var(--papier);padding:10px 16px;border-radius:8px}
-button.haupt{background:var(--messing);color:var(--tinte);font-weight:bold}
-button:active{transform:translateY(1px)}
-#start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:var(--bg)}
-#start h1{font-size:20px;color:var(--messing);margin:0}
-#start p{max-width:420px;color:#cbbf9f;font-size:14px;margin:0}
-#protokoll{position:fixed;inset:0;background:var(--papier);color:var(--tinte);padding:18px;overflow:auto;display:none}
+html,body{margin:0;height:100%;background:var(--leder);color:var(--papier);font:16px/1.35 Georgia,"Times New Roman",serif;overflow:hidden}
+#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#3b352a radial-gradient(circle at 50% 45%,#5a5141,#24201a 70%)}
+#okular{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+.gravur{font-family:Georgia,"Times New Roman",serif;font-variant:small-caps;letter-spacing:.06em}
+#schild{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0));width:min(94vw,440px);
+  padding:10px 14px 12px;border-radius:12px;color:#2a1d08;
+  background:linear-gradient(160deg,#f7e3a2 0%,#d6ae55 35%,#a77e2c 60%,#e8c873 85%,#b58a35 100%);
+  box-shadow:0 0 0 2px #5b4214, inset 0 1px 0 #fff3c4, inset 0 -2px 6px rgba(60,40,10,.6), 0 6px 18px rgba(0,0,0,.6)}
+#schild::before,#schild::after{content:"";position:absolute;top:9px;width:9px;height:9px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff2c0,#8a6420 70%);box-shadow:inset 0 0 0 1px #5b4214}
+#schild::before{left:9px} #schild::after{right:9px}
+#zeile1{display:flex;justify-content:center;align-items:baseline;gap:8px;text-shadow:0 1px 0 rgba(255,240,190,.7)}
+#gon{font-size:40px;font-weight:bold;letter-spacing:1px}
+#gon sup{font-size:.5em;vertical-align:super;margin:0 2px}
+#hoehe{text-align:center;font-size:13px;opacity:.85}
+#meldung{min-height:20px;text-align:center;margin:4px 0 8px;font-size:14px;font-style:italic}
+#meldung.gut{color:#1f5d12;font-weight:bold} #meldung.station{color:#4a2b07}
+.knoepfe{display:flex;gap:10px;justify-content:center}
+button{font:inherit;font-variant:small-caps;letter-spacing:.06em;font-size:16px;color:#2a1d08;padding:8px 18px;border-radius:20px;border:1px solid #5b4214;
+  background:linear-gradient(180deg,#fbe9b0,#c99c45 55%,#9c7428);box-shadow:inset 0 1px 0 #fff6d0,0 2px 3px rgba(0,0,0,.45)}
+button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+#kopf{position:fixed;top:calc(8px + env(safe-area-inset-top,0));left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;font-size:12px;color:var(--messing-hell);text-shadow:0 1px 2px #000;opacity:.9}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(circle at 50% 40%,#3a2a17,#120c06 75%)}
+#typenschild{width:min(92vw,420px);padding:22px 22px 20px;border-radius:14px;text-align:center;color:#2a1d08;
+  background:linear-gradient(155deg,#f8e6a8 0%,#d5ac52 30%,#a07728 55%,#e6c46c 80%,#b28733 100%);
+  box-shadow:0 0 0 3px #4d3810,inset 0 0 0 1px #fff0c0,inset 0 -3px 10px rgba(60,40,10,.6),0 10px 30px rgba(0,0,0,.7);position:relative}
+#typenschild .schraube{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff2c0,#7a5a1c 70%);box-shadow:inset 0 0 0 1px #4d3810}
+#typenschild .schraube::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:2px;background:#4d3810;transform:rotate(35deg)}
+#typenschild h1{margin:6px 0 2px;font-size:24px;letter-spacing:.08em;text-shadow:0 1px 0 rgba(255,240,190,.8)}
+#typenschild .linie{height:0;border-top:1px solid #5b4214;border-bottom:1px solid #fff0c0;margin:10px 18px}
+#typenschild p{margin:6px 0;font-size:14px}
+#typenschild .klein{font-size:12px;opacity:.85}
+#los{margin-top:12px;font-size:18px;padding:10px 26px}
+#protokoll{position:fixed;inset:0;padding:18px;overflow:auto;display:none;color:var(--tinte);
+  background:#efe3c3 repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,90,40,.25) 27px 28px);font-family:"Courier New",Courier,monospace}
+#protokoll h2{font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.06em;margin:0 0 4px}
 #protokoll table{border-collapse:collapse;width:100%;font-size:14px}
-#protokoll td,#protokoll th{border-bottom:1px dashed #8a7d62;padding:4px 6px;text-align:left}
-#sim{position:fixed;top:100px;left:10px;right:10px;background:rgba(20,17,12,.9);border:1px dashed var(--messing);padding:8px;font-size:12px;display:none}
+#protokoll td,#protokoll th{border-bottom:1px solid rgba(90,60,20,.35);padding:4px 6px;text-align:left}
+#sim{position:fixed;top:40px;left:10px;right:10px;background:rgba(20,14,8,.88);border:1px dashed var(--messing);padding:8px;font:12px "Courier New",monospace;display:none;z-index:5}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:9em;font:inherit}
-.klein{font-size:12px;color:#a99c7c}
+#sim button{font-size:12px;padding:3px 10px}
 </style>
 </head>
 <body>
 <video id="video" playsinline muted autoplay></video>
-<svg id="okular" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-  <defs><radialGradient id="vignette" cx="50%" cy="50%" r="60%"><stop offset="62%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".75"/></radialGradient></defs>
-  <rect x="0" y="0" width="100" height="100" fill="url(#vignette)"/>
-  <g stroke="#e8d9a8" stroke-width=".25" fill="none" opacity=".9">
-    <line x1="50" y1="30" x2="50" y2="47"/><line x1="50" y1="53" x2="50" y2="70"/>
-    <line x1="30" y1="50" x2="47" y2="50"/><line x1="53" y1="50" x2="70" y2="50"/>
-    <circle cx="50" cy="50" r="12" stroke-dasharray=".8 .8"/>
-    <line x1="48" y1="44" x2="52" y2="44"/><line x1="48" y1="56" x2="52" y2="56"/>
+
+<svg id="okular" viewBox="-41 -47 82 82" preserveAspectRatio="xMidYMin meet">
+  <defs>
+    <radialGradient id="leder" cx="0" cy="0" r="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0.45" stop-color="#2a1d10"/><stop offset="1" stop-color="#0d0905"/>
+    </radialGradient>
+    <linearGradient id="messing" x1="0" y1="-1" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#fbe7a6"/><stop offset=".28" stop-color="#d1a64c"/><stop offset=".5" stop-color="#8f6721"/>
+      <stop offset=".72" stop-color="#e9c66d"/><stop offset="1" stop-color="#7a5a1c"/>
+    </linearGradient>
+    <linearGradient id="messing2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8f6721"/><stop offset=".45" stop-color="#f3d68a"/><stop offset="1" stop-color="#6e4f17"/>
+    </linearGradient>
+    <radialGradient id="glas" cx="0" cy="-8" r="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/>
+    </radialGradient>
+    <mask id="loch"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><circle r="27" fill="#000"/></mask>
+  </defs>
+  <!-- Gehäuse um das Okular -->
+  <rect x="-200" y="-200" width="400" height="400" fill="url(#leder)" mask="url(#loch)"/>
+  <!-- Messingringe -->
+  <circle r="38.5" fill="none" stroke="url(#messing)" stroke-width="3"/>
+  <circle r="37" fill="none" stroke="#3d2b0c" stroke-width=".25"/>
+  <g id="raendel"></g>
+  <circle r="33" fill="none" stroke="url(#messing2)" stroke-width="8.4"/>
+  <circle r="28.8" fill="none" stroke="url(#messing)" stroke-width="1.8"/>
+  <circle r="27.2" fill="none" stroke="#2a1d08" stroke-width=".5"/>
+  <!-- drehende Teilung in Gon -->
+  <g id="teilung"></g>
+  <!-- Ablesemarke -->
+  <path d="M0,-28.6 L-1.6,-25.4 L1.6,-25.4 Z" fill="#c8442f" stroke="#3d1a0c" stroke-width=".2"/>
+  <path d="M0,-37.4 L-1.2,-39.6 L1.2,-39.6 Z" fill="#2a1d08"/>
+  <!-- Gravur auf dem äußeren Ring -->
+  <path id="schriftbogen" d="M -35.6,0 A 35.6,35.6 0 0 1 35.6,0" fill="none"/>
+  <path id="schriftbogen2" d="M -36.7,0 A 36.7,36.7 0 0 0 36.7,0" fill="none"/>
+  <text font-size="1.9" fill="#3d2b0c" font-family="Georgia,serif" letter-spacing=".35" opacity=".85">
+    <textPath href="#schriftbogen2" startOffset="50%" text-anchor="middle">WERKSTÄTTE P. N. STRASSER · AUGSBURG · No. 17</textPath>
+  </text>
+  <!-- Fadenkreuz -->
+  <g stroke="#f1e2b0" stroke-width=".14" opacity=".95">
+    <line x1="0" y1="-26.5" x2="0" y2="-1.4"/><line x1="0" y1="1.4" x2="0" y2="26.5"/>
+    <line x1="-26.5" y1="0" x2="-1.4" y2="0"/><line x1="1.4" y1="0" x2="26.5" y2="0"/>
+    <line x1="-2.2" y1="-6" x2="2.2" y2="-6"/><line x1="-2.2" y1="6" x2="2.2" y2="6"/>
+    <line x1="-6" y1="-.9" x2="-6" y2=".9"/><line x1="6" y1="-.9" x2="6" y2=".9"/>
   </g>
-  <circle id="ziel" cx="50" cy="50" r="13.5" stroke="#7fd16a" stroke-width=".6" fill="none" opacity="0"/>
+  <circle r=".45" fill="none" stroke="#f1e2b0" stroke-width=".12"/>
+  <circle id="ziel" r="10" fill="none" stroke="#9be07f" stroke-width=".5" stroke-dasharray="1.2 .8" opacity="0"/>
+  <circle r="27" fill="url(#glas)"/>
 </svg>
-<div id="band"><canvas id="skala"></canvas></div>
-<div id="kopf"><span id="nord">Nord: –</span><span id="genau">GPS: –</span></div>
+
+<div id="kopf"><span id="nord" class="gravur">Nord –</span><span id="genau" class="gravur">Ort –</span></div>
+
 <div id="sim">
   <b>Prüfmodus (kein Kompass gefunden)</b><br>
   Richtung <input type="range" id="simRichtung" min="0" max="400" step="0.5" value="0"> <span id="simWert">0</span> gon<br>
   Höhenwinkel <input type="range" id="simHoehe" min="-100" max="100" step="1" value="0"><br>
   Standort <input type="text" id="simLat" value="48.33345"> <input type="text" id="simLon" value="10.90012"> <button id="simSetzen">setzen</button>
 </div>
-<div id="unten">
-  <div id="anzeige"><span id="gon">–––,–</span><span id="einheit">gon</span></div>
-  <div id="hoehe">Höhenwinkel –</div>
+
+<div id="schild">
+  <div id="zeile1"><span id="gon">–––</span></div>
+  <div id="hoehe" class="gravur">Höhenwinkel –</div>
   <div id="meldung"></div>
-  <div class="knoepfe">
-    <button class="haupt" id="messen">Messen</button>
-    <button id="zeigeProtokoll">Protokoll</button>
-  </div>
+  <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button></div>
 </div>
+
 <div id="protokoll">
-  <h2 style="margin:0 0 6px">Messprotokoll</h2>
-  <p class="klein" style="margin:0 0 10px">Gesellschaft zur Wiedereinführung des Ferro-Meridians · Winkel in Gon (Vollkreis 400) · Norden rechtweisend</p>
+  <h2>Messprotokoll</h2>
+  <p style="margin:0 0 10px;font-size:12px">Gesellschaft zur Wiedereinführung des Ferro-Meridians · Neugrad (Vollkreis 400ᵍ, 1ᵍ = 100ᶜ) · Norden rechtweisend</p>
   <table><thead><tr><th>Uhr</th><th>Richtung</th><th>Höhe</th><th>Ort</th></tr></thead><tbody id="zeilen"></tbody></table>
   <p><button id="zurueck">Zurück zum Okular</button></p>
 </div>
+
 <div id="start">
-  <h1>Theodolit der GWFM</h1>
-  <p>Ein Theodolit misst Richtungen. Dieser hier misst in Gon: der Vollkreis hat 400, Osten ist 100, Süden 200, Westen 300.</p>
-  <p>Er braucht die Kamera, den Kompass und den Standort Ihres Telefons. Es wird nichts gesendet; alles bleibt im Gerät.</p>
-  <button class="haupt" id="los">Okular öffnen</button>
-  <p class="klein" id="schluesselHinweis"></p>
+  <div id="typenschild">
+    <span class="schraube" style="left:10px;top:10px"></span><span class="schraube" style="right:10px;top:10px"></span>
+    <span class="schraube" style="left:10px;bottom:10px"></span><span class="schraube" style="right:10px;bottom:10px"></span>
+    <div class="gravur" style="font-size:13px">Gesellschaft zur Wiedereinführung des Ferro-Meridians</div>
+    <h1 class="gravur">Theodolit No. 17</h1>
+    <div class="gravur" style="font-size:15px;font-style:italic">Ex Ferro lux</div>
+    <div class="linie"></div>
+    <p>Teilung in Neugrad. Der Vollkreis hat 400ᵍ: Osten 100ᵍ, Süden 200ᵍ, Westen 300ᵍ.</p>
+    <p class="klein">Das Instrument braucht Kamera, Kompass und Standort Ihres Fernsprechgeräts. Gesendet wird nichts; alles verbleibt im Gerät.</p>
+    <button id="los">Okular öffnen</button>
+    <p class="klein" id="schluesselHinweis"></p>
+    <div class="linie"></div>
+    <div class="gravur klein">Werkstätte P. N. Strasser · Augsburg 1997</div>
+  </div>
 </div>
+
 <script src="stationen.js" onerror="window.THEO_DATEN=null"></script>
 <script>
 "use strict";
@@ -89,13 +154,42 @@ button:active{transform:translateY(1px)}
 const MISSWEISUNG_GRAD = 4.5;      // Augsburg 2026, ca. 4,5° Ost: magnetisch + 4,5° = rechtweisend (Schätzwert)
 const GLAETTUNG = 0.15;            // 0..1, kleiner = ruhiger
 const GON = 400 / 360;
+const SVGNS = "http://www.w3.org/2000/svg";
 
 const $ = (id) => document.getElementById(id);
 let richtungGrad = null, hoeheGrad = null, quelle = "";
-let glX = null, glY = null;        // geglätteter Richtungsvektor
+let glX = null, glY = null;
 let ort = null, genauigkeit = null;
 let stationen = [], schluesselOk = false, aktuelleStation = null, letzteBestaetigung = 0;
 const protokoll = [];
+
+// ---------- Ring zeichnen (Rändelung und Gon-Teilung) ----------
+(function ringBauen() {
+  const r = $("raendel");
+  for (let i = 0; i < 180; i++) {
+    const l = document.createElementNS(SVGNS, "line");
+    l.setAttribute("x1", 0); l.setAttribute("y1", -40.4); l.setAttribute("x2", 0); l.setAttribute("y2", -39.2);
+    l.setAttribute("stroke", i % 2 ? "#5b4214" : "#f6dc96"); l.setAttribute("stroke-width", ".35");
+    l.setAttribute("transform", `rotate(${i * 2})`); r.appendChild(l);
+  }
+  const t = $("teilung");
+  for (let g = 0; g < 400; g += 2) {
+    const lang = g % 20 === 0, mittel = g % 10 === 0;
+    const l = document.createElementNS(SVGNS, "line");
+    l.setAttribute("x1", 0); l.setAttribute("y1", -29.2); l.setAttribute("x2", 0); l.setAttribute("y2", lang ? -32.2 : mittel ? -31.2 : -30.3);
+    l.setAttribute("stroke", "#2a1d08"); l.setAttribute("stroke-width", lang ? ".32" : ".18");
+    l.setAttribute("transform", `rotate(${g * 0.9})`); t.appendChild(l);
+    if (lang) {
+      const z = document.createElementNS(SVGNS, "text");
+      z.setAttribute("x", 0); z.setAttribute("y", -33.4); z.setAttribute("text-anchor", "middle");
+      z.setAttribute("font-size", g % 100 === 0 ? "2.4" : "1.7"); z.setAttribute("font-family", "Georgia,serif");
+      z.setAttribute("fill", g % 100 === 0 ? "#6e1f10" : "#2a1d08"); if (g % 100 === 0) z.setAttribute("font-weight", "bold");
+      z.setAttribute("transform", `rotate(${g * 0.9})`);
+      z.textContent = { 0: "N", 100: "O", 200: "S", 300: "W" }[g] || String(g);
+      t.appendChild(z);
+    }
+  }
+})();
 
 // ---------- Schlüssel und Stationen ----------
 function schluessel() { return decodeURIComponent(location.hash.slice(1) || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
@@ -103,8 +197,8 @@ function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 async function stationenLaden() {
   const k = schluessel();
   stationen = []; schluesselOk = false;
-  if (!window.THEO_DATEN) { $("schluesselHinweis").textContent = "Keine Stationsdaten gefunden. Der Theodolit misst trotzdem."; return; }
-  if (!k) { $("schluesselHinweis").textContent = "Ohne Schlüssel: nur Messen. Den Schlüssel finden Sie in der Cartridge."; return; }
+  if (!window.THEO_DATEN) { $("schluesselHinweis").textContent = "Keine Stationsdaten gefunden. Das Instrument misst trotzdem."; return; }
+  if (!k) { $("schluesselHinweis").textContent = "Ohne Schlüssel misst das Instrument nur. Den Schlüssel finden Sie in der Cartridge."; return; }
   try {
     const d = window.THEO_DATEN;
     const basis = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), "PBKDF2", false, ["deriveKey"]);
@@ -113,9 +207,9 @@ async function stationenLaden() {
     const klar = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten));
     stationen = JSON.parse(new TextDecoder().decode(klar)).stationen;
     schluesselOk = true;
-    $("schluesselHinweis").textContent = "Schlüssel angenommen. Der Theodolit kennt die Messpunkte der Gesellschaft.";
+    $("schluesselHinweis").textContent = "Schlüssel angenommen. Das Instrument kennt die Messpunkte der Gesellschaft.";
   } catch (e) {
-    $("schluesselHinweis").textContent = "Dieser Schlüssel passt nicht. Der Theodolit misst trotzdem.";
+    $("schluesselHinweis").textContent = "Dieser Schlüssel passt nicht. Das Instrument misst trotzdem.";
   }
 }
 
@@ -123,9 +217,9 @@ async function stationenLaden() {
 // W3C: R = Rz(alpha) Rx(beta) Ry(gamma). Kamera blickt entlang -z des Geräts.
 function kameraRichtung(a, b, g) {
   const r = Math.PI / 180, cA = Math.cos(a * r), sA = Math.sin(a * r), cB = Math.cos(b * r), sB = Math.sin(b * r), cG = Math.cos(g * r), sG = Math.sin(g * r);
-  const x = -(cA * sG + sA * sB * cG);   // Ost
-  const y = -(sA * sG - cA * sB * cG);   // Nord
-  const z = -(cB * cG);                  // oben
+  const x = -(cA * sG + sA * sB * cG);
+  const y = -(sA * sG - cA * sB * cG);
+  const z = -(cB * cG);
   return { richtung: (Math.atan2(x, y) / r + 360) % 360, hoehe: Math.asin(Math.max(-1, Math.min(1, z))) / r };
 }
 function neueRichtung(grad, hoehe, q) {
@@ -141,14 +235,14 @@ window.addEventListener("deviceorientationabsolute", (e) => {
   if (e.alpha === null) return;
   absolutGesehen = sensorGesehen = true;
   const k = kameraRichtung(e.alpha, e.beta, e.gamma);
-  neueRichtung(rechtweisend(k.richtung), k.hoehe, "Kompass (Android)");
+  neueRichtung(rechtweisend(k.richtung), k.hoehe, "Kompass");
 }, true);
 window.addEventListener("deviceorientation", (e) => {
   if (absolutGesehen) return;
-  if (typeof e.webkitCompassHeading === "number") {          // iPhone: Kompassrichtung direkt
+  if (typeof e.webkitCompassHeading === "number") {
     sensorGesehen = true;
     const k = kameraRichtung(e.alpha || 0, e.beta || 0, e.gamma || 0);
-    neueRichtung(rechtweisend(e.webkitCompassHeading), k.hoehe, "Kompass (iPhone)");
+    neueRichtung(rechtweisend(e.webkitCompassHeading), k.hoehe, "Kompass");
   } else if (e.absolute && e.alpha !== null) {
     sensorGesehen = true;
     const k = kameraRichtung(e.alpha, e.beta, e.gamma);
@@ -175,7 +269,7 @@ function standortStarten() {
   navigator.geolocation.watchPosition((p) => {
     if ($("sim").style.display === "block") return;
     ort = { lat: p.coords.latitude, lon: p.coords.longitude }; genauigkeit = p.coords.accuracy;
-  }, () => { $("genau").textContent = "GPS: aus"; }, { enableHighAccuracy: true, maximumAge: 2000 });
+  }, () => { $("genau").textContent = "Ort aus"; }, { enableHighAccuracy: true, maximumAge: 2000 });
 }
 
 // ---------- Kamera ----------
@@ -183,39 +277,26 @@ async function kameraStarten() {
   try {
     const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
     $("video").srcObject = s;
-  } catch (e) { /* ohne Kamera: Raster bleibt sichtbar */ }
+  } catch (e) { /* ohne Kamera bleibt das Glas dunkel */ }
 }
 
 // ---------- Anzeige ----------
+function neugrad(g) {   // 137.4 -> 137ᵍ 40ᶜ
+  const gg = ((g % 400) + 400) % 400, ganz = Math.floor(gg), c = Math.round((gg - ganz) * 100);
+  const g2 = c === 100 ? ganz + 1 : ganz, c2 = c === 100 ? 0 : c;
+  return { g: String(g2 % 400).padStart(3, "0"), c: String(c2).padStart(2, "0") };
+}
 function fmt(g) { return g.toFixed(1).replace(".", ","); }
 function winkelDiff(a, b) { return Math.abs(((a - b) % 400 + 600) % 400 - 200); }
-function skalaZeichnen() {
-  const c = $("skala"), w = c.clientWidth, h = c.clientHeight, dpr = devicePixelRatio || 1;
-  if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
-  const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
-  if (richtungGrad === null) return;
-  const mitte = richtungGrad * GON, proGon = w / 80;     // 80 gon Sichtbreite
-  x.strokeStyle = "#c9a24a"; x.fillStyle = "#f4ecd6"; x.font = "12px Courier New"; x.textAlign = "center";
-  for (let g = Math.floor(mitte - 45); g <= mitte + 45; g++) {
-    const px = w / 2 + (g - mitte) * proGon, gg = (g % 400 + 400) % 400;
-    const lang = gg % 10 === 0, mittel = gg % 5 === 0;
-    x.beginPath(); x.moveTo(px, h); x.lineTo(px, h - (lang ? 16 : mittel ? 10 : 5)); x.stroke();
-    if (lang) {
-      const name = { 0: "N", 100: "O", 200: "S", 300: "W" }[gg];
-      x.fillText(name || String(gg), px, 16);
-    }
-  }
-  x.fillStyle = "#e0624f"; x.beginPath(); x.moveTo(w / 2 - 6, h); x.lineTo(w / 2 + 6, h); x.lineTo(w / 2, h - 12); x.fill();
-}
 function tick() {
   if (richtungGrad !== null) {
-    const g = richtungGrad * GON;
-    $("gon").textContent = fmt(g).padStart(5, "0");
-    $("hoehe").textContent = "Höhenwinkel " + (hoeheGrad >= 0 ? "+" : "") + fmt(hoeheGrad * GON) + " gon · " + quelle;
+    const g = richtungGrad * GON, n = neugrad(g);
+    $("gon").innerHTML = `${n.g}<sup>g</sup>${n.c}<sup>c</sup>`;
+    $("teilung").setAttribute("transform", `rotate(${-richtungGrad})`);
+    $("hoehe").textContent = "Höhenwinkel " + (hoeheGrad >= 0 ? "+" : "−") + fmt(Math.abs(hoeheGrad * GON)) + "ᵍ";
   }
-  $("nord").textContent = "Nord: rechtweisend (+" + fmt(MISSWEISUNG_GRAD * GON) + " gon)";
-  $("genau").textContent = ort ? "GPS: ±" + Math.round(genauigkeit) + " m" : "GPS: sucht";
-  // Station erkennen
+  $("nord").textContent = "Nord rechtweisend";
+  $("genau").textContent = ort ? "Ort ±" + Math.round(genauigkeit) + " m" : "Ort wird bestimmt";
   aktuelleStation = null;
   if (schluesselOk && ort) {
     for (const s of stationen) if (abstand(ort, s) <= s.radius + Math.min(genauigkeit || 0, 15)) { aktuelleStation = s; break; }
@@ -229,18 +310,18 @@ function tick() {
       m.className = "gut"; m.textContent = "Peilung stimmt. " + aktuelleStation.name + ".";
       if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
     } else { m.className = "station"; m.textContent = aktuelleStation.text; }
-  } else { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
-  skalaZeichnen();
+  } else if (m.dataset.fest !== "1") { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
   requestAnimationFrame(tick);
 }
 
 // ---------- Messen und Protokoll ----------
 $("messen").onclick = () => {
   if (richtungGrad === null) return;
-  const jetzt = new Date();
+  const jetzt = new Date(), n = neugrad(richtungGrad * GON);
   protokoll.push({ uhr: jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-    richtung: fmt(richtungGrad * GON), hoehe: fmt(hoeheGrad * GON), ort: aktuelleStation ? aktuelleStation.name : (ort ? "unbenannt" : "–") });
-  $("meldung").className = "station"; $("meldung").textContent = "Gemessen: " + fmt(richtungGrad * GON) + " gon";
+    richtung: `${n.g}ᵍ ${n.c}ᶜ`, hoehe: fmt(hoeheGrad * GON) + "ᵍ", ort: aktuelleStation ? aktuelleStation.name : (ort ? "unbenannt" : "–") });
+  const m = $("meldung"); m.className = "station"; m.textContent = `Gemessen: ${n.g}ᵍ ${n.c}ᶜ`; m.dataset.fest = "1";
+  setTimeout(() => { m.dataset.fest = ""; }, 2500);
   if (navigator.vibrate) navigator.vibrate(30);
 };
 $("zeigeProtokoll").onclick = () => {
@@ -249,7 +330,7 @@ $("zeigeProtokoll").onclick = () => {
 };
 $("zurueck").onclick = () => { $("protokoll").style.display = "none"; };
 
-// ---------- Start (iPhone verlangt einen Knopfdruck für Kompass) ----------
+// ---------- Start (iPhone verlangt einen Knopfdruck für den Kompass) ----------
 $("los").onclick = async () => {
   try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
   $("start").style.display = "none";
