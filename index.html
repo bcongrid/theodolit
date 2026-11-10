@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Theodolit der GWFM</title>
+<!-- Web-Theodolit (Entwurf 11.11.2026). Kamera + Kompass in Gon, Messprotokoll.
+     Stationen liegen verschlüsselt in stationen.js; Schlüssel steht hinter # in der Adresse (aus der Cartridge).
+     Braucht HTTPS (oder localhost). Kein Server, nichts wird gesendet. -->
+<style>
+:root{--messing:#c9a24a;--messing-dunkel:#8a6a22;--papier:#f4ecd6;--tinte:#2b2418;--gruen:#7fd16a;--rot:#e0624f;--bg:#14110c}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--papier);font:16px/1.35 "Courier New",Courier,monospace;overflow:hidden}
+#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#222 repeating-linear-gradient(0deg,#2a2620 0 1px,transparent 1px 40px),repeating-linear-gradient(90deg,#2a2620 0 1px,transparent 1px 40px)}
+#okular{position:fixed;inset:0;pointer-events:none}
+#band{position:fixed;top:env(safe-area-inset-top,0);left:0;right:0;height:46px;background:rgba(20,17,12,.78);border-bottom:2px solid var(--messing);overflow:hidden}
+#band canvas{width:100%;height:100%}
+#kopf{position:fixed;top:calc(env(safe-area-inset-top,0) + 50px);left:12px;right:12px;display:flex;justify-content:space-between;font-size:12px;color:var(--messing);text-shadow:0 1px 2px #000}
+#unten{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0));background:linear-gradient(transparent,rgba(20,17,12,.92) 30%)}
+#anzeige{display:flex;align-items:baseline;justify-content:center;gap:10px}
+#gon{font-size:44px;font-weight:bold;color:var(--papier);letter-spacing:1px;text-shadow:0 2px 4px #000}
+#einheit{color:var(--messing)}
+#hoehe{text-align:center;font-size:13px;color:#cbbf9f}
+#meldung{min-height:22px;text-align:center;margin:6px 0;font-size:14px}
+#meldung.gut{color:var(--gruen)} #meldung.station{color:var(--messing)}
+.knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+button{font:inherit;font-size:15px;border:2px solid var(--messing);background:#2a2216;color:var(--papier);padding:10px 16px;border-radius:8px}
+button.haupt{background:var(--messing);color:var(--tinte);font-weight:bold}
+button:active{transform:translateY(1px)}
+#start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:var(--bg)}
+#start h1{font-size:20px;color:var(--messing);margin:0}
+#start p{max-width:420px;color:#cbbf9f;font-size:14px;margin:0}
+#protokoll{position:fixed;inset:0;background:var(--papier);color:var(--tinte);padding:18px;overflow:auto;display:none}
+#protokoll table{border-collapse:collapse;width:100%;font-size:14px}
+#protokoll td,#protokoll th{border-bottom:1px dashed #8a7d62;padding:4px 6px;text-align:left}
+#sim{position:fixed;top:100px;left:10px;right:10px;background:rgba(20,17,12,.9);border:1px dashed var(--messing);padding:8px;font-size:12px;display:none}
+#sim input[type=range]{width:100%}
+#sim input[type=text]{width:9em;font:inherit}
+.klein{font-size:12px;color:#a99c7c}
+</style>
+</head>
+<body>
+<video id="video" playsinline muted autoplay></video>
+<svg id="okular" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+  <defs><radialGradient id="vignette" cx="50%" cy="50%" r="60%"><stop offset="62%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".75"/></radialGradient></defs>
+  <rect x="0" y="0" width="100" height="100" fill="url(#vignette)"/>
+  <g stroke="#e8d9a8" stroke-width=".25" fill="none" opacity=".9">
+    <line x1="50" y1="30" x2="50" y2="47"/><line x1="50" y1="53" x2="50" y2="70"/>
+    <line x1="30" y1="50" x2="47" y2="50"/><line x1="53" y1="50" x2="70" y2="50"/>
+    <circle cx="50" cy="50" r="12" stroke-dasharray=".8 .8"/>
+    <line x1="48" y1="44" x2="52" y2="44"/><line x1="48" y1="56" x2="52" y2="56"/>
+  </g>
+  <circle id="ziel" cx="50" cy="50" r="13.5" stroke="#7fd16a" stroke-width=".6" fill="none" opacity="0"/>
+</svg>
+<div id="band"><canvas id="skala"></canvas></div>
+<div id="kopf"><span id="nord">Nord: –</span><span id="genau">GPS: –</span></div>
+<div id="sim">
+  <b>Prüfmodus (kein Kompass gefunden)</b><br>
+  Richtung <input type="range" id="simRichtung" min="0" max="400" step="0.5" value="0"> <span id="simWert">0</span> gon<br>
+  Höhenwinkel <input type="range" id="simHoehe" min="-100" max="100" step="1" value="0"><br>
+  Standort <input type="text" id="simLat" value="48.33345"> <input type="text" id="simLon" value="10.90012"> <button id="simSetzen">setzen</button>
+</div>
+<div id="unten">
+  <div id="anzeige"><span id="gon">–––,–</span><span id="einheit">gon</span></div>
+  <div id="hoehe">Höhenwinkel –</div>
+  <div id="meldung"></div>
+  <div class="knoepfe">
+    <button class="haupt" id="messen">Messen</button>
+    <button id="zeigeProtokoll">Protokoll</button>
+  </div>
+</div>
+<div id="protokoll">
+  <h2 style="margin:0 0 6px">Messprotokoll</h2>
+  <p class="klein" style="margin:0 0 10px">Gesellschaft zur Wiedereinführung des Ferro-Meridians · Winkel in Gon (Vollkreis 400) · Norden rechtweisend</p>
+  <table><thead><tr><th>Uhr</th><th>Richtung</th><th>Höhe</th><th>Ort</th></tr></thead><tbody id="zeilen"></tbody></table>
+  <p><button id="zurueck">Zurück zum Okular</button></p>
+</div>
+<div id="start">
+  <h1>Theodolit der GWFM</h1>
+  <p>Ein Theodolit misst Richtungen. Dieser hier misst in Gon: der Vollkreis hat 400, Osten ist 100, Süden 200, Westen 300.</p>
+  <p>Er braucht die Kamera, den Kompass und den Standort Ihres Telefons. Es wird nichts gesendet; alles bleibt im Gerät.</p>
+  <button class="haupt" id="los">Okular öffnen</button>
+  <p class="klein" id="schluesselHinweis"></p>
+</div>
+<script src="stationen.js" onerror="window.THEO_DATEN=null"></script>
+<script>
+"use strict";
+// ---------- Einstellungen ----------
+const MISSWEISUNG_GRAD = 4.5;      // Augsburg 2026, ca. 4,5° Ost: magnetisch + 4,5° = rechtweisend (Schätzwert)
+const GLAETTUNG = 0.15;            // 0..1, kleiner = ruhiger
+const GON = 400 / 360;
+
+const $ = (id) => document.getElementById(id);
+let richtungGrad = null, hoeheGrad = null, quelle = "";
+let glX = null, glY = null;        // geglätteter Richtungsvektor
+let ort = null, genauigkeit = null;
+let stationen = [], schluesselOk = false, aktuelleStation = null, letzteBestaetigung = 0;
+const protokoll = [];
+
+// ---------- Schlüssel und Stationen ----------
+function schluessel() { return decodeURIComponent(location.hash.slice(1) || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+async function stationenLaden() {
+  const k = schluessel();
+  stationen = []; schluesselOk = false;
+  if (!window.THEO_DATEN) { $("schluesselHinweis").textContent = "Keine Stationsdaten gefunden. Der Theodolit misst trotzdem."; return; }
+  if (!k) { $("schluesselHinweis").textContent = "Ohne Schlüssel: nur Messen. Den Schlüssel finden Sie in der Cartridge."; return; }
+  try {
+    const d = window.THEO_DATEN;
+    const basis = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(d.salz), iterations: d.runden, hash: "SHA-256" },
+      basis, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const klar = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten));
+    stationen = JSON.parse(new TextDecoder().decode(klar)).stationen;
+    schluesselOk = true;
+    $("schluesselHinweis").textContent = "Schlüssel angenommen. Der Theodolit kennt die Messpunkte der Gesellschaft.";
+  } catch (e) {
+    $("schluesselHinweis").textContent = "Dieser Schlüssel passt nicht. Der Theodolit misst trotzdem.";
+  }
+}
+
+// ---------- Richtung aus der Lage des Telefons ----------
+// W3C: R = Rz(alpha) Rx(beta) Ry(gamma). Kamera blickt entlang -z des Geräts.
+function kameraRichtung(a, b, g) {
+  const r = Math.PI / 180, cA = Math.cos(a * r), sA = Math.sin(a * r), cB = Math.cos(b * r), sB = Math.sin(b * r), cG = Math.cos(g * r), sG = Math.sin(g * r);
+  const x = -(cA * sG + sA * sB * cG);   // Ost
+  const y = -(sA * sG - cA * sB * cG);   // Nord
+  const z = -(cB * cG);                  // oben
+  return { richtung: (Math.atan2(x, y) / r + 360) % 360, hoehe: Math.asin(Math.max(-1, Math.min(1, z))) / r };
+}
+function neueRichtung(grad, hoehe, q) {
+  const r = grad * Math.PI / 180, x = Math.sin(r), y = Math.cos(r);
+  if (glX === null) { glX = x; glY = y; } else { glX += (x - glX) * GLAETTUNG; glY += (y - glY) * GLAETTUNG; }
+  richtungGrad = (Math.atan2(glX, glY) * 180 / Math.PI + 360) % 360;
+  hoeheGrad = hoehe; quelle = q;
+}
+function rechtweisend(magnetisch) { return (magnetisch + MISSWEISUNG_GRAD + 360) % 360; }
+
+let absolutGesehen = false, sensorGesehen = false;
+window.addEventListener("deviceorientationabsolute", (e) => {
+  if (e.alpha === null) return;
+  absolutGesehen = sensorGesehen = true;
+  const k = kameraRichtung(e.alpha, e.beta, e.gamma);
+  neueRichtung(rechtweisend(k.richtung), k.hoehe, "Kompass (Android)");
+}, true);
+window.addEventListener("deviceorientation", (e) => {
+  if (absolutGesehen) return;
+  if (typeof e.webkitCompassHeading === "number") {          // iPhone: Kompassrichtung direkt
+    sensorGesehen = true;
+    const k = kameraRichtung(e.alpha || 0, e.beta || 0, e.gamma || 0);
+    neueRichtung(rechtweisend(e.webkitCompassHeading), k.hoehe, "Kompass (iPhone)");
+  } else if (e.absolute && e.alpha !== null) {
+    sensorGesehen = true;
+    const k = kameraRichtung(e.alpha, e.beta, e.gamma);
+    neueRichtung(rechtweisend(k.richtung), k.hoehe, "Kompass");
+  }
+}, true);
+
+// ---------- Prüfmodus ohne Sensor (PC) ----------
+function simAn() {
+  $("sim").style.display = "block";
+  const lesen = () => { const g = +$("simRichtung").value; $("simWert").textContent = g.toFixed(1); glX = null; neueRichtung(g / GON, +$("simHoehe").value * 0.9, "Prüfmodus"); };
+  $("simRichtung").oninput = lesen; $("simHoehe").oninput = lesen; lesen();
+  $("simSetzen").onclick = () => { ort = { lat: +$("simLat").value, lon: +$("simLon").value }; genauigkeit = 5; };
+}
+
+// ---------- Standort ----------
+function abstand(a, b) {
+  const R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function standortStarten() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.watchPosition((p) => {
+    if ($("sim").style.display === "block") return;
+    ort = { lat: p.coords.latitude, lon: p.coords.longitude }; genauigkeit = p.coords.accuracy;
+  }, () => { $("genau").textContent = "GPS: aus"; }, { enableHighAccuracy: true, maximumAge: 2000 });
+}
+
+// ---------- Kamera ----------
+async function kameraStarten() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    $("video").srcObject = s;
+  } catch (e) { /* ohne Kamera: Raster bleibt sichtbar */ }
+}
+
+// ---------- Anzeige ----------
+function fmt(g) { return g.toFixed(1).replace(".", ","); }
+function winkelDiff(a, b) { return Math.abs(((a - b) % 400 + 600) % 400 - 200); }
+function skalaZeichnen() {
+  const c = $("skala"), w = c.clientWidth, h = c.clientHeight, dpr = devicePixelRatio || 1;
+  if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
+  if (richtungGrad === null) return;
+  const mitte = richtungGrad * GON, proGon = w / 80;     // 80 gon Sichtbreite
+  x.strokeStyle = "#c9a24a"; x.fillStyle = "#f4ecd6"; x.font = "12px Courier New"; x.textAlign = "center";
+  for (let g = Math.floor(mitte - 45); g <= mitte + 45; g++) {
+    const px = w / 2 + (g - mitte) * proGon, gg = (g % 400 + 400) % 400;
+    const lang = gg % 10 === 0, mittel = gg % 5 === 0;
+    x.beginPath(); x.moveTo(px, h); x.lineTo(px, h - (lang ? 16 : mittel ? 10 : 5)); x.stroke();
+    if (lang) {
+      const name = { 0: "N", 100: "O", 200: "S", 300: "W" }[gg];
+      x.fillText(name || String(gg), px, 16);
+    }
+  }
+  x.fillStyle = "#e0624f"; x.beginPath(); x.moveTo(w / 2 - 6, h); x.lineTo(w / 2 + 6, h); x.lineTo(w / 2, h - 12); x.fill();
+}
+function tick() {
+  if (richtungGrad !== null) {
+    const g = richtungGrad * GON;
+    $("gon").textContent = fmt(g).padStart(5, "0");
+    $("hoehe").textContent = "Höhenwinkel " + (hoeheGrad >= 0 ? "+" : "") + fmt(hoeheGrad * GON) + " gon · " + quelle;
+  }
+  $("nord").textContent = "Nord: rechtweisend (+" + fmt(MISSWEISUNG_GRAD * GON) + " gon)";
+  $("genau").textContent = ort ? "GPS: ±" + Math.round(genauigkeit) + " m" : "GPS: sucht";
+  // Station erkennen
+  aktuelleStation = null;
+  if (schluesselOk && ort) {
+    for (const s of stationen) if (abstand(ort, s) <= s.radius + Math.min(genauigkeit || 0, 15)) { aktuelleStation = s; break; }
+  }
+  const m = $("meldung"), zielKreis = $("ziel");
+  if (aktuelleStation) {
+    const z = aktuelleStation.ziel;
+    const trifft = z && richtungGrad !== null && winkelDiff(richtungGrad * GON, z.gon) <= z.toleranz;
+    zielKreis.setAttribute("opacity", trifft ? "1" : "0");
+    if (trifft) {
+      m.className = "gut"; m.textContent = "Peilung stimmt. " + aktuelleStation.name + ".";
+      if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
+    } else { m.className = "station"; m.textContent = aktuelleStation.text; }
+  } else { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
+  skalaZeichnen();
+  requestAnimationFrame(tick);
+}
+
+// ---------- Messen und Protokoll ----------
+$("messen").onclick = () => {
+  if (richtungGrad === null) return;
+  const jetzt = new Date();
+  protokoll.push({ uhr: jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    richtung: fmt(richtungGrad * GON), hoehe: fmt(hoeheGrad * GON), ort: aktuelleStation ? aktuelleStation.name : (ort ? "unbenannt" : "–") });
+  $("meldung").className = "station"; $("meldung").textContent = "Gemessen: " + fmt(richtungGrad * GON) + " gon";
+  if (navigator.vibrate) navigator.vibrate(30);
+};
+$("zeigeProtokoll").onclick = () => {
+  $("zeilen").innerHTML = protokoll.map(p => `<tr><td>${p.uhr}</td><td>${p.richtung}</td><td>${p.hoehe}</td><td>${p.ort}</td></tr>`).join("") || '<tr><td colspan="4">Noch nichts gemessen.</td></tr>';
+  $("protokoll").style.display = "block";
+};
+$("zurueck").onclick = () => { $("protokoll").style.display = "none"; };
+
+// ---------- Start (iPhone verlangt einen Knopfdruck für Kompass) ----------
+$("los").onclick = async () => {
+  try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+  $("start").style.display = "none";
+  kameraStarten(); standortStarten();
+  setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
+  requestAnimationFrame(tick);
+};
+if (!window.isSecureContext) $("schluesselHinweis").textContent = "Achtung: Diese Seite braucht https, sonst bleiben Kamera und Kompass gesperrt.";
+else stationenLaden();
+window.addEventListener("hashchange", stationenLaden);
+</script>
+</body>
+</html>
