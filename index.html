@@ -11,7 +11,7 @@
 :root{--messing:#d4ad55;--messing-hell:#f6dc96;--messing-dunkel:#7a5a1c;--papier:#f3e7c8;--tinte:#2b2418;--gruen:#9be07f;--rot:#c8442f;--leder:#1b130b}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--leder);color:var(--papier);font:16px/1.35 Georgia,"Times New Roman",serif;overflow:hidden}
-#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#3b352a radial-gradient(circle at 50% 45%,#5a5141,#24201a 70%)}
+#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:50% 38%;background:#3b352a radial-gradient(circle at 50% 45%,#5a5141,#24201a 70%)}
 #okular{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
 .gravur{font-family:Georgia,"Times New Roman",serif;font-variant:small-caps;letter-spacing:.06em}
 #schild{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0));width:min(94vw,440px);
@@ -49,6 +49,11 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 #protokoll h2{font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.06em;margin:0 0 4px}
 #protokoll table{border-collapse:collapse;width:100%;font-size:14px}
 #protokoll td,#protokoll th{border-bottom:1px solid rgba(90,60,20,.35);padding:4px 6px;text-align:left}
+#rad{position:fixed;left:50%;transform:translateX(-50%);top:calc(min(100vw,82vh) * 1.07 + 8px);touch-action:none;z-index:3;display:flex;flex-direction:column;align-items:center;gap:4px}
+#rolle{width:min(62vw,240px);height:34px;border-radius:40px/12px;box-shadow:0 0 0 2px #4d3810,inset 0 0 0 1px #fff0c0,0 4px 10px rgba(0,0,0,.6);
+  background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(255,240,190,.25) 35%,rgba(255,240,190,.4) 50%,rgba(0,0,0,.6)),
+  repeating-linear-gradient(90deg,#f3d68a 0 3px,#7a5a1c 3px 6px);background-size:100% 100%,6px 100%}
+#zoomwert{font:12px Georgia,serif;font-variant:small-caps;color:var(--messing-hell);text-shadow:0 1px 2px #000}
 #sim{position:fixed;top:40px;left:10px;right:10px;background:rgba(20,14,8,.88);border:1px dashed var(--messing);padding:8px;font:12px "Courier New",monospace;display:none;z-index:5}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:9em;font:inherit}
@@ -109,6 +114,7 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 
 <div id="kopf"><span id="nord" class="gravur">Nord –</span><span id="genau" class="gravur">Ort –</span></div>
 
+<div id="rad"><div id="rolle" title="Trieb"></div><span id="zoomwert">×1,0</span></div>
 <div id="sim">
   <b>Prüfmodus (kein Kompass gefunden)</b><br>
   Richtung <input type="range" id="simRichtung" min="0" max="400" step="0.5" value="0"> <span id="simWert">0</span> gon<br>
@@ -272,12 +278,42 @@ function standortStarten() {
   }, () => { $("genau").textContent = "Ort aus"; }, { enableHighAccuracy: true, maximumAge: 2000 });
 }
 
+
+// ---------- Trieb (Zoom): optisch, wenn die Kamera es kann, sonst digital ----------
+let spur = null, zoomMin = 1, zoomMax = 4, zoom = 1, optisch = false, radPos = 0;
+function zoomSetzen(z) {
+  zoom = Math.max(zoomMin, Math.min(zoomMax, z));
+  if (optisch && spur) { spur.applyConstraints({ advanced: [{ zoom }] }).catch(() => {}); $("video").style.transform = ""; }
+  else {
+    const glas = document.querySelector('#okular circle[r="27"]').getBoundingClientRect();
+    $("video").style.transformOrigin = `${glas.left + glas.width / 2}px ${glas.top + glas.height / 2}px`;
+    $("video").style.transform = `scale(${zoom})`;
+  }
+  $("zoomwert").textContent = "×" + zoom.toFixed(1).replace(".", ",") + (optisch ? "" : " dig.");
+}
+(function radBauen() {
+  const rolle = $("rolle"); let y0 = null;
+  const drehen = (dy) => {
+    radPos += dy; rolle.style.backgroundPosition = `0 0, ${radPos}px 0`;
+    zoomSetzen(zoom * Math.pow(1.012, -dy));
+    if (navigator.vibrate && Math.abs(radPos % 24) < Math.abs(dy)) navigator.vibrate(4);
+  };
+  $("rad").addEventListener("pointerdown", (e) => { y0 = e.clientX; e.target.setPointerCapture(e.pointerId); });
+  $("rad").addEventListener("pointermove", (e) => { if (y0 === null) return; drehen(y0 - e.clientX); y0 = e.clientX; });
+  $("rad").addEventListener("pointerup", () => { y0 = null; });
+  $("rad").addEventListener("wheel", (e) => { e.preventDefault(); drehen(e.deltaY * 0.3); }, { passive: false });
+})();
+
 // ---------- Kamera ----------
 async function kameraStarten() {
   try {
     const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
     $("video").srcObject = s;
+    spur = s.getVideoTracks()[0];
+    const f = spur.getCapabilities ? spur.getCapabilities() : {};
+    if (f.zoom && f.zoom.max > f.zoom.min) { optisch = true; zoomMin = f.zoom.min; zoomMax = Math.min(f.zoom.max, 10); zoom = Math.max(zoomMin, 1); }
   } catch (e) { /* ohne Kamera bleibt das Glas dunkel */ }
+  zoomSetzen(zoom);
 }
 
 // ---------- Anzeige ----------
