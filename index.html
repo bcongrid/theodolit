@@ -49,11 +49,13 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 #protokoll h2{font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.06em;margin:0 0 4px}
 #protokoll table{border-collapse:collapse;width:100%;font-size:14px}
 #protokoll td,#protokoll th{border-bottom:1px solid rgba(90,60,20,.35);padding:4px 6px;text-align:left}
-#rad{position:fixed;left:50%;transform:translateX(-50%);top:min(calc(min(100vw,82vh) * 1.07 + 8px), calc(100vh - 250px));touch-action:none;z-index:3;display:flex;flex-direction:column;align-items:center;gap:4px}
-#rolle{width:min(62vw,240px);height:34px;border-radius:40px/12px;box-shadow:0 0 0 2px #4d3810,inset 0 0 0 1px #fff0c0,0 4px 10px rgba(0,0,0,.6);
-  background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(255,240,190,.25) 35%,rgba(255,240,190,.4) 50%,rgba(0,0,0,.6)),
-  repeating-linear-gradient(90deg,#f3d68a 0 3px,#7a5a1c 3px 6px);background-size:100% 100%,6px 100%}
-#zoomwert{font:12px Georgia,serif;font-variant:small-caps;color:var(--messing-hell);text-shadow:0 1px 2px #000}
+/* Trieb: senkrechtes Rändelrad rechts im Messingschild, mit dem rechten Daumen drehen */
+#schild{padding-right:58px}
+#rad{position:absolute;right:12px;top:24px;bottom:10px;width:34px;touch-action:none;z-index:3;border-radius:8px;
+  background:linear-gradient(90deg,#4d3810,#2a1d08 50%,#4d3810);box-shadow:inset 0 2px 5px rgba(0,0,0,.8),0 1px 0 #fff0c0}
+#rolle{position:absolute;left:4px;right:4px;top:4px;bottom:4px;border-radius:12px/40px;box-shadow:0 0 0 1px #4d3810,inset 0 0 0 1px #fff0c0,0 2px 6px rgba(0,0,0,.6);
+  background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(255,240,190,.25) 35%,rgba(255,240,190,.45) 50%,rgba(0,0,0,.6)),
+  repeating-linear-gradient(0deg,#f3d68a 0 3px,#7a5a1c 3px 6px);background-size:100% 100%,100% 6px}
 #sim{position:fixed;top:40px;left:10px;right:10px;background:rgba(20,14,8,.88);border:1px dashed var(--messing);padding:8px;font:12px "Courier New",monospace;display:none;z-index:5}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:9em;font:inherit}
@@ -124,13 +126,14 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
     <image href="hierro.gif" x="-22" y="4" width="16" height="17" clip-path="url(#kamee)" preserveAspectRatio="xMidYMin slice"/>
     <circle cx="-14" cy="12" r="7.2" fill="none" stroke="url(#messing)" stroke-width=".9"/>
   </g>
+  <!-- Vergrößerung, halbtransparent im Okular -->
+  <text id="zoomwert" x="0" y="22.5" text-anchor="middle" font-size="2.1" fill="#f1e2b0" opacity=".55" font-family="Georgia,serif" letter-spacing=".15">×1,0</text>
   <circle id="ziel" r="10" fill="none" stroke="#9be07f" stroke-width=".5" stroke-dasharray="1.2 .8" opacity="0"/>
   <circle r="27" fill="url(#glas)"/>
 </svg>
 
 <div id="kopf"><span id="nord" class="gravur">Nord –</span><span id="genau" class="gravur">Ort –</span></div>
 
-<div id="rad"><div id="rolle" title="Trieb"></div><span id="zoomwert">×1,0</span></div>
 <div id="sim">
   <b>Prüfmodus (kein Kompass gefunden)</b><br>
   Richtung <input type="range" id="simRichtung" min="0" max="400" step="0.5" value="0"> <span id="simWert">0</span> gon<br>
@@ -143,6 +146,7 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
   <div id="hoehe" class="gravur">Höhenwinkel –</div>
   <div id="meldung"></div>
   <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button></div>
+  <div id="rad" title="Trieb: hoch = näher"><div id="rolle"></div></div>
 </div>
 
 <div id="protokoll">
@@ -310,14 +314,16 @@ function zoomSetzen(z) {
 (function radBauen() {
   const rolle = $("rolle"); let y0 = null;
   const drehen = (dy) => {
-    radPos += dy; rolle.style.backgroundPosition = `0 0, ${radPos}px 0`;
-    zoomSetzen(zoom * Math.pow(1.012, -dy));
+    // dy > 0: Daumen schiebt nach oben = näher heran
+    radPos -= dy; rolle.style.backgroundPosition = `0 0, 0 ${radPos}px`;
+    zoomSetzen(zoom * Math.pow(1.012, dy));
     if (navigator.vibrate && Math.abs(radPos % 24) < Math.abs(dy)) navigator.vibrate(4);
   };
-  $("rad").addEventListener("pointerdown", (e) => { y0 = e.clientX; e.target.setPointerCapture(e.pointerId); });
-  $("rad").addEventListener("pointermove", (e) => { if (y0 === null) return; drehen(y0 - e.clientX); y0 = e.clientX; });
+  $("rad").addEventListener("pointerdown", (e) => { y0 = e.clientY; $("rad").setPointerCapture(e.pointerId); });
+  $("rad").addEventListener("pointermove", (e) => { if (y0 === null) return; drehen(y0 - e.clientY); y0 = e.clientY; });
   $("rad").addEventListener("pointerup", () => { y0 = null; });
-  $("rad").addEventListener("wheel", (e) => { e.preventDefault(); drehen(e.deltaY * 0.3); }, { passive: false });
+  $("rad").addEventListener("pointercancel", () => { y0 = null; });
+  $("rad").addEventListener("wheel", (e) => { e.preventDefault(); drehen(-e.deltaY * 0.3); }, { passive: false });
 })();
 
 // ---------- Kamera ----------
