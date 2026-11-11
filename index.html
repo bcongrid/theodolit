@@ -56,13 +56,17 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 #rolle{position:absolute;left:4px;right:4px;top:4px;bottom:4px;border-radius:12px/40px;box-shadow:0 0 0 1px #4d3810,inset 0 0 0 1px #fff0c0,0 2px 6px rgba(0,0,0,.6);
   background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(255,240,190,.25) 35%,rgba(255,240,190,.45) 50%,rgba(0,0,0,.6)),
   repeating-linear-gradient(0deg,#f3d68a 0 3px,#7a5a1c 3px 6px);background-size:100% 100%,100% 6px}
+/* trübes Glas: ohne gültigen Schlüssel (in der Cartridge erst putzen) */
+body.trueb #video{filter:blur(7px) saturate(.35) brightness(1.15) contrast(.7)}
+#schmutz{opacity:0;transition:opacity 1.5s}
+body.trueb #schmutz{opacity:1}
 #sim{position:fixed;top:40px;left:10px;right:10px;background:rgba(20,14,8,.88);border:1px dashed var(--messing);padding:8px;font:12px "Courier New",monospace;display:none;z-index:5}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:9em;font:inherit}
 #sim button{font-size:12px;padding:3px 10px}
 </style>
 </head>
-<body>
+<body class="trueb">
 <video id="video" playsinline muted autoplay></video>
 
 <svg id="okular" viewBox="-41 -47 82 82" preserveAspectRatio="xMidYMin meet">
@@ -79,6 +83,10 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
     </linearGradient>
     <radialGradient id="glas" cx="0" cy="-8" r="34" gradientUnits="userSpaceOnUse">
       <stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/>
+    </radialGradient>
+    <filter id="wisch" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".9"/></filter>
+    <radialGradient id="milch" cx="0" cy="0" r="27" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#efe6cf" stop-opacity=".22"/><stop offset=".8" stop-color="#e2d6b4" stop-opacity=".35"/><stop offset="1" stop-color="#c9b98f" stop-opacity=".55"/>
     </radialGradient>
     <mask id="loch"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><circle r="27" fill="#000"/></mask>
   </defs>
@@ -129,6 +137,19 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
   <!-- Vergrößerung, halbtransparent im Okular -->
   <text id="zoomwert" x="0" y="22.5" text-anchor="middle" font-size="2.1" fill="#f1e2b0" opacity=".55" font-family="Georgia,serif" letter-spacing=".15">×1,0</text>
   <circle id="ziel" r="10" fill="none" stroke="#9be07f" stroke-width=".5" stroke-dasharray="1.2 .8" opacity="0"/>
+  <!-- Schmutz auf dem Glas (verschwindet mit dem richtigen Schlüssel) -->
+  <g id="schmutz">
+    <circle r="27" fill="url(#milch)"/>
+    <g filter="url(#wisch)" fill="#d8cba6" opacity=".55">
+      <ellipse cx="-9" cy="-11" rx="7" ry="3.5" transform="rotate(-25 -9 -11)"/>
+      <ellipse cx="12" cy="8" rx="5" ry="2.2" transform="rotate(40 12 8)"/>
+      <ellipse cx="-4" cy="15" rx="9" ry="2" transform="rotate(8 -4 15)"/>
+    </g>
+    <g fill="none" stroke="#efe3c0" stroke-width=".22" opacity=".35" transform="translate(9 -12) rotate(20)">
+      <ellipse rx="1.2" ry="1.7"/><ellipse rx="2" ry="2.6"/><ellipse rx="2.8" ry="3.5"/><ellipse rx="3.6" ry="4.4"/><ellipse rx="4.4" ry="5.3"/>
+    </g>
+    <circle cx="-15" cy="6" r="1.4" fill="#6b5a3a" opacity=".45" filter="url(#wisch)"/>
+  </g>
   <circle r="27" fill="url(#glas)"/>
 </svg>
 
@@ -224,7 +245,8 @@ async function stationenLaden() {
   const k = schluessel();
   stationen = []; schluesselOk = false;
   if (!window.THEO_DATEN) { $("schluesselHinweis").textContent = "Keine Stationsdaten gefunden. Das Instrument misst trotzdem."; return; }
-  if (!k) { $("schluesselHinweis").textContent = "Ohne Schlüssel misst das Instrument nur. Den Schlüssel finden Sie in der Cartridge."; return; }
+  document.body.classList.add("trueb");
+  if (!k) { $("schluesselHinweis").textContent = "Das Glas ist trüb. Mit einem trüben Okular misst niemand genau."; return; }
   try {
     const d = window.THEO_DATEN;
     const basis = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), "PBKDF2", false, ["deriveKey"]);
@@ -233,9 +255,10 @@ async function stationenLaden() {
     const klar = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten));
     stationen = JSON.parse(new TextDecoder().decode(klar)).stationen;
     schluesselOk = true;
+    document.body.classList.remove("trueb");
     $("schluesselHinweis").textContent = "Schlüssel angenommen. Das Instrument kennt die Messpunkte der Gesellschaft.";
   } catch (e) {
-    $("schluesselHinweis").textContent = "Dieser Schlüssel passt nicht. Das Instrument misst trotzdem.";
+    $("schluesselHinweis").textContent = "Das Glas ist trüb. Mit einem trüben Okular misst niemand genau.";
   }
 }
 
@@ -376,7 +399,7 @@ function lotZeichnen(zeit) {
     const nah = st.radius;
     ziel = naechste <= nah ? 0 : 22 * Math.min(1, (naechste - nah) / (reichweite - nah));   // Grad Ausschlag
   }
-  const ferro = zieltAufFerro();
+  const ferro = !trueb() && zieltAufFerro();
   if (ferro) { sicht = 1; ziel = 38; }                 // Ferro zieht: das Lot spielt verrückt
   lotAusschlag += (ziel - lotAusschlag) * (ferro ? 0.08 : 0.03);
   lotSichtbar += (sicht - lotSichtbar) * 0.04;
@@ -387,11 +410,18 @@ function lotZeichnen(zeit) {
   $("lotarm").setAttribute("transform", `rotate(${winkel})`);
   $("lot").setAttribute("opacity", lotSichtbar.toFixed(2));
 }
+let zitter = 0;
+function trueb() { return !schluesselOk; }
+function angezeigtGon() {   // trübes Glas: die Ablesung schwimmt um ein paar Gon
+  if (!trueb()) return richtungGrad * GON;
+  zitter = Math.max(-5, Math.min(5, zitter + (Math.random() - 0.5) * 0.9));
+  return ((richtungGrad * GON + zitter) % 400 + 400) % 400;
+}
 function tick(zeit) {
   if (richtungGrad !== null) {
-    const g = richtungGrad * GON, n = neugrad(g);
+    const g = angezeigtGon(), n = neugrad(g);
     $("gon").innerHTML = `${n.g}<sup>g</sup>${n.c}<sup>c</sup>`;
-    $("teilung").setAttribute("transform", `rotate(${-richtungGrad})`);
+    $("teilung").setAttribute("transform", `rotate(${-g * 0.9})`);
     $("hoehe").textContent = "Höhenwinkel " + (hoeheGrad >= 0 ? "+" : "−") + fmt(Math.abs(hoeheGrad * GON)) + "ᵍ";
   }
   $("nord").textContent = "Nord rechtweisend";
@@ -409,6 +439,8 @@ function tick(zeit) {
       m.className = "gut"; m.textContent = "Peilung stimmt. " + aktuelleStation.name + ".";
       if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
     } else { m.className = "station"; m.textContent = aktuelleStation.text; }
+  } else if (trueb() && m.dataset.fest !== "1") {
+    m.className = "station"; m.textContent = "Das Glas ist trüb. Man sieht kaum etwas.";
   } else if (zieltAufFerro() && m.dataset.fest !== "1") {
     const km = abstand(ort || AUGSBURG, FERRO) / 1000;
     m.className = "station";
@@ -421,7 +453,7 @@ function tick(zeit) {
 // ---------- Messen und Protokoll ----------
 $("messen").onclick = () => {
   if (richtungGrad === null) return;
-  const jetzt = new Date(), n = neugrad(richtungGrad * GON);
+  const jetzt = new Date(), n = neugrad(angezeigtGon());
   protokoll.push({ uhr: jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
     richtung: `${n.g}ᵍ ${n.c}ᶜ`, hoehe: fmt(hoeheGrad * GON) + "ᵍ", ort: aktuelleStation ? aktuelleStation.name : (ort ? "unbenannt" : "–") });
   const m = $("meldung"); m.className = "station"; m.textContent = `Gemessen: ${n.g}ᵍ ${n.c}ᶜ`; m.dataset.fest = "1";
