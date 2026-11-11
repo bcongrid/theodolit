@@ -351,16 +351,42 @@ function zoomSetzen(z) {
 })();
 
 // ---------- Kamera ----------
-async function kameraStarten() {
+let kameraGewollt = false, kameraErstmals = true;
+async function kameraStarten(versuch = 0) {
+  kameraGewollt = true;
+  if (spur || document.hidden) return;
   try {
     const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    if (document.hidden) { s.getTracks().forEach(t => t.stop()); return; }
     $("video").srcObject = s;
     spur = s.getVideoTracks()[0];
     const f = spur.getCapabilities ? spur.getCapabilities() : {};
-    if (f.zoom && f.zoom.max > f.zoom.min) { optisch = true; zoomMin = f.zoom.min; zoomMax = Math.min(f.zoom.max, 10); zoom = Math.max(zoomMin, 1); }
-  } catch (e) { /* ohne Kamera bleibt das Glas dunkel */ }
+    if (f.zoom && f.zoom.max > f.zoom.min) {
+      optisch = true; zoomMin = f.zoom.min; zoomMax = Math.min(f.zoom.max, 10);
+      zoom = kameraErstmals ? Math.max(zoomMin, 1) : Math.min(zoomMax, Math.max(zoomMin, zoom));
+    }
+    kameraErstmals = false;
+  } catch (e) {
+    // besetzt (anderer Tab/App) oder gesperrt: einmal nachfassen, dann Hinweis; ohne Kamera bleibt das Glas dunkel
+    if (versuch < 2 && e && e.name !== "NotAllowedError") { setTimeout(() => kameraStarten(versuch + 1), 1200); return; }
+    const m = $("meldung");
+    m.className = ""; m.dataset.fest = "1";
+    m.textContent = e && e.name === "NotAllowedError" ? "Kamera gesperrt: in den Browser-Einstellungen erlauben." : "Kamera besetzt: andere Tabs oder Apps mit Kamera schließen.";
+    setTimeout(() => { m.dataset.fest = ""; }, 8000);
+  }
   zoomSetzen(zoom);
 }
+// Hintergrund oder Sperrbildschirm: Kamera freigeben (anderer Tab bekommt sie, Akku), vorne wieder holen
+function kameraFreigeben() {
+  const v = $("video");
+  if (v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+  v.srcObject = null; spur = null;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) kameraFreigeben();
+  else if (kameraGewollt) kameraStarten();
+});
+window.addEventListener("pagehide", kameraFreigeben);
 
 // ---------- Anzeige ----------
 function neugrad(g) {   // 137.4 -> 137ᵍ 40ᶜ
