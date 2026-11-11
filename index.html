@@ -49,7 +49,7 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 #protokoll h2{font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.06em;margin:0 0 4px}
 #protokoll table{border-collapse:collapse;width:100%;font-size:14px}
 #protokoll td,#protokoll th{border-bottom:1px solid rgba(90,60,20,.35);padding:4px 6px;text-align:left}
-#rad{position:fixed;left:50%;transform:translateX(-50%);top:calc(min(100vw,82vh) * 1.07 + 8px);touch-action:none;z-index:3;display:flex;flex-direction:column;align-items:center;gap:4px}
+#rad{position:fixed;left:50%;transform:translateX(-50%);top:min(calc(min(100vw,82vh) * 1.07 + 8px), calc(100vh - 250px));touch-action:none;z-index:3;display:flex;flex-direction:column;align-items:center;gap:4px}
 #rolle{width:min(62vw,240px);height:34px;border-radius:40px/12px;box-shadow:0 0 0 2px #4d3810,inset 0 0 0 1px #fff0c0,0 4px 10px rgba(0,0,0,.6);
   background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(255,240,190,.25) 35%,rgba(255,240,190,.4) 50%,rgba(0,0,0,.6)),
   repeating-linear-gradient(90deg,#f3d68a 0 3px,#7a5a1c 3px 6px);background-size:100% 100%,6px 100%}
@@ -108,6 +108,15 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
     <line x1="-6" y1="-.9" x2="-6" y2=".9"/><line x1="6" y1="-.9" x2="6" y2=".9"/>
   </g>
   <circle r=".45" fill="none" stroke="#f1e2b0" stroke-width=".12"/>
+  <!-- Pendellot: erscheint nahe einem Messpunkt der Gesellschaft, pendelt ruhiger, je näher man kommt -->
+  <g id="lot" opacity="0" transform="translate(15,-25)">
+    <circle r=".7" fill="url(#messing)" stroke="#3d2b0c" stroke-width=".12"/>
+    <g id="lotarm">
+      <line x1="0" y1="0" x2="0" y2="15" stroke="#e8d9a8" stroke-width=".12"/>
+      <path d="M-1.1,15 L1.1,15 L0.9,16.6 L0,19 L-0.9,16.6 Z" fill="url(#messing)" stroke="#3d2b0c" stroke-width=".15"/>
+      <circle cy="15" r=".35" fill="#3d2b0c"/>
+    </g>
+  </g>
   <circle id="ziel" r="10" fill="none" stroke="#9be07f" stroke-width=".5" stroke-dasharray="1.2 .8" opacity="0"/>
   <circle r="27" fill="url(#glas)"/>
 </svg>
@@ -324,7 +333,27 @@ function neugrad(g) {   // 137.4 -> 137ᵍ 40ᶜ
 }
 function fmt(g) { return g.toFixed(1).replace(".", ","); }
 function winkelDiff(a, b) { return Math.abs(((a - b) % 400 + 600) % 400 - 200); }
-function tick() {
+
+// ---------- Pendellot ----------
+const LOT_REICHWEITE = 50;   // m: ab hier erscheint das Lot
+let lotAusschlag = 0, lotSichtbar = 0;
+function lotZeichnen(zeit) {
+  let naechste = Infinity, st = null;
+  if (schluesselOk && ort) for (const s of stationen) { const d = abstand(ort, s); if (d < naechste) { naechste = d; st = s; } }
+  const reichweite = LOT_REICHWEITE + Math.min(genauigkeit || 0, 20);
+  let ziel = 0, sicht = 0;
+  if (st && naechste < reichweite) {
+    sicht = 1;
+    const nah = st.radius;
+    ziel = naechste <= nah ? 0 : 22 * Math.min(1, (naechste - nah) / (reichweite - nah));   // Grad Ausschlag
+  }
+  lotAusschlag += (ziel - lotAusschlag) * 0.03;      // langsam beruhigen
+  lotSichtbar += (sicht - lotSichtbar) * 0.04;
+  const winkel = lotAusschlag * Math.sin(zeit / 1000 * 2 * Math.PI / 1.7) + (lotAusschlag < 0.5 ? 0.3 * Math.sin(zeit / 900) : 0);
+  $("lotarm").setAttribute("transform", `rotate(${winkel})`);
+  $("lot").setAttribute("opacity", lotSichtbar.toFixed(2));
+}
+function tick(zeit) {
   if (richtungGrad !== null) {
     const g = richtungGrad * GON, n = neugrad(g);
     $("gon").innerHTML = `${n.g}<sup>g</sup>${n.c}<sup>c</sup>`;
@@ -347,6 +376,7 @@ function tick() {
       if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
     } else { m.className = "station"; m.textContent = aktuelleStation.text; }
   } else if (m.dataset.fest !== "1") { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
+  lotZeichnen(zeit || performance.now());
   requestAnimationFrame(tick);
 }
 
