@@ -62,7 +62,7 @@ svg{display:block;width:100%;height:auto}
       <rect x="18" y="14" width="264" height="104" rx="5" fill="#efe6cf"/>
       <rect x="18" y="14" width="264" height="18" rx="5" fill="#c8442f" id="streifen"/>
       <text id="seite" x="30" y="28" font-family="Georgia,serif" font-weight="700" font-size="13" fill="#efe6cf">A</text>
-      <text x="270" y="28" text-anchor="end" font-family="Courier New,monospace" font-size="10" fill="#efe6cf">C15</text>
+      <text x="270" y="28" text-anchor="end" font-family="Courier New,monospace" font-size="10" fill="#efe6cf">C20</text>
       <text id="titel" x="150" y="50" text-anchor="middle" font-family="Segoe Print,Bradley Hand,Comic Sans MS,cursive" font-size="13" fill="#2a2418">Mirko 97 · slowenische Lieder</text>
       <!-- Sichtfenster -->
       <rect x="62" y="60" width="176" height="50" rx="24" fill="#16130f" stroke="#000"/>
@@ -93,9 +93,9 @@ svg{display:block;width:100%;height:auto}
 <script>
 "use strict";
 // ---------- Band ----------
-// C15: 7,5 min je Seite. Eine Kassette: Seite B läuft rückwärts über dasselbe Band.
+// C20: 10 min je Seite (Seite B ist 8,2 min). Eine Kassette: Seite B läuft rückwärts über dasselbe Band.
 // pos = Bandstelle in Sekunden, gezählt auf Seite A (0 = Anfang A = Ende B).
-const LAENGE = 450, SPUL = 7, R_MIN = 11, R_MAX = 25;   // Spulen in SVG-Einheiten
+const LAENGE = 600, SPUL = 7, R_MIN = 11, R_MAX = 25;   // Spulen in SVG-Einheiten
 const $ = (id) => document.getElementById(id);
 let ctx = null, puffer = { A: null, B: null }, rueck = { A: null, B: null }, rauschPuffer = null;
 let seite = "A", pos = 0, modus = "stop", quelle = null, rauschen = null, t0 = 0, p0 = 0, rate = 0;
