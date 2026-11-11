@@ -27,7 +27,12 @@ html,body{margin:0;height:100%;background:var(--leder);color:var(--papier);font:
 #hoehe{text-align:center;font-size:13px;opacity:.85}
 #meldung{min-height:20px;text-align:center;margin:4px 0 8px;font-size:14px;font-style:italic}
 #meldung.gut{color:#1f5d12;font-weight:bold} #meldung.station{color:#4a2b07}
-.knoepfe{display:flex;gap:10px;justify-content:center}
+.knoepfe{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+body:not(.trueb) #putzen{display:none}
+#tuch{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,6,2,.75);z-index:6}
+#tuch .karte{width:min(92vw,380px);padding:18px;border-radius:12px;color:#2a1d08;text-align:center;background:linear-gradient(160deg,#f7e3a2,#d6ae55 45%,#b58a35);box-shadow:0 0 0 2px #5b4214,0 8px 24px rgba(0,0,0,.6)}
+#tuch input{font:20px 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;width:100%;margin:10px 0;padding:8px;border:1px solid #5b4214;border-radius:6px;background:#fbf3d8;color:#2a1d08;text-align:center}
+#tuchMeldung{min-height:1.3em;font-style:italic;font-size:14px}
 button{font:inherit;font-variant:small-caps;letter-spacing:.06em;font-size:16px;color:#2a1d08;padding:8px 18px;border-radius:20px;border:1px solid #5b4214;
   background:linear-gradient(180deg,#fbe9b0,#c99c45 55%,#9c7428);box-shadow:inset 0 1px 0 #fff6d0,0 2px 3px rgba(0,0,0,.45)}
 button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
@@ -167,9 +172,17 @@ body.trueb #hierroBild{filter:url(#wisch)}
   <div id="zeile1"><span id="gon">–––</span></div>
   <div id="hoehe" class="gravur">Höhenwinkel –</div>
   <div id="meldung"></div>
-  <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button></div>
+  <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button><button id="putzen">Putzen</button></div>
   <div id="rad" title="Trieb: hoch = näher"><div id="rolle"></div></div>
 </div>
+
+<div id="tuch"><form class="karte" id="tuchForm">
+  <div class="gravur" style="font-size:18px">Linse putzen</div>
+  <p style="font-size:14px;margin:8px 0 0">Mit welchem Tuch? Die Nummer auf dem Tuch eingeben.</p>
+  <input id="tuchCode" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Nummer auf dem Tuch">
+  <div id="tuchMeldung"></div>
+  <div class="knoepfe" style="margin-top:8px"><button type="submit">Wischen</button><button type="button" id="tuchZu">Zurück</button></div>
+</form></div>
 
 <div id="protokoll">
   <h2>Messprotokoll</h2>
@@ -441,7 +454,7 @@ function tick(zeit) {
       if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
     } else { m.className = "station"; m.textContent = aktuelleStation.text; }
   } else if (trueb() && zieltAufFerro() && m.dataset.fest !== "1") {
-    m.className = "station"; m.textContent = "Hinter dem Schleier winkt jemand. Ganz fern: „Putzen Sie die Linse! Der Pförtner hat ein Tuch, er staubt jeden Montag ab.“";
+    m.className = "station"; m.textContent = "Hinter dem Schleier winkt jemand. Ganz fern: „Putzen Sie die Linse! Der G. hat doch immer ein Tuch dabei, für seine Uhren.“";
   } else if (trueb() && m.dataset.fest !== "1") {
     m.className = "station"; m.textContent = "Das Glas ist trüb. Man sieht kaum etwas.";
   } else if (zieltAufFerro() && m.dataset.fest !== "1") {
@@ -452,6 +465,26 @@ function tick(zeit) {
   lotZeichnen(zeit || performance.now());
   requestAnimationFrame(tick);
 }
+
+// ---------- Putzen: die Nummer auf Herrn G.s Tuch ist der Schlüssel ----------
+$("putzen").onclick = () => { $("tuch").style.display = "flex"; $("tuchMeldung").textContent = ""; $("tuchCode").value = ""; $("tuchCode").focus(); };
+$("tuchZu").onclick = () => { $("tuch").style.display = "none"; };
+$("tuchForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const code = $("tuchCode").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!code) return;
+  $("tuchMeldung").textContent = "Sie wischen …";
+  history.replaceState(null, "", "#" + code);
+  await stationenLaden();
+  if (schluesselOk) {
+    $("tuch").style.display = "none";
+    const m = $("meldung"); m.className = "gut"; m.textContent = "Blank geputzt. Jetzt sieht man etwas."; m.dataset.fest = "1";
+    setTimeout(() => { m.dataset.fest = ""; }, 3500);
+    if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 40]);
+  } else {
+    $("tuchMeldung").textContent = "Mit diesem Tuch wird es nicht sauberer.";
+  }
+};
 
 // ---------- Messen und Protokoll ----------
 $("messen").onclick = () => {
