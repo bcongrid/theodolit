@@ -190,7 +190,9 @@ function bild(zeit) {
   const sp = seite === "A" ? p : LAENGE - p;               // auf der eingelegten Seite: links abwickeln, rechts aufwickeln
   const rL = radius(1 - sp / LAENGE), rR = radius(sp / LAENGE);
   $("wickelL").setAttribute("r", rL.toFixed(2)); $("wickelR").setAttribute("r", rR.toFixed(2));
-  const v = rate * 2.2;                                     // Bandgeschwindigkeit in SVG-Einheiten je Sekunde
+  // Bandgeschwindigkeit in SVG-Einheiten je Sekunde (Nutzerin 11.11.: PLAY so schnell wie vorher FF, Spulen sichtbar schneller;
+  // beim Spulen optisch nur ×3,5 statt ×7, sonst flimmern die Speichen)
+  const v = modus === "stop" ? 0 : modus === "play" ? 16 : Math.sign(rate) * 16 * 3.5;
   winkelL += v / rL * dt * 57.3; winkelR += v / rR * dt * 57.3;
   $("spuleL").setAttribute("transform", `translate(100,85) rotate(${winkelL % 360})`);
   $("spuleR").setAttribute("transform", `translate(200,85) rotate(${winkelR % 360})`);
