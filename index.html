@@ -149,6 +149,15 @@ body.trueb #hierroBild{filter:url(#wisch)}
     <path id="pfeilL" d="M-25.6,0 L-23.4,-1.6 L-23.4,1.6 Z" fill="#c8442f" opacity="0"/>
     <path id="pfeilR" d="M25.6,0 L23.4,-1.6 L23.4,1.6 Z" fill="#c8442f" opacity="0"/>
   </g>
+  <!-- Messhund N0-STR: läuft auf dem Boden voraus, Zählwerk in Werkschuh auf dem Hinterteil (#SCHLÜSSEL/1740/N) -->
+  <filter id="glimm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation=".25" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <g clip-path="url(#glasrand)"><g id="hund" opacity="0">
+    <image href="n0str_hinten.png" x="-5" y="-10" width="10" height="10"/>
+    <rect x="-1.85" y="-5.6" width="3.7" height="1.7" rx=".15" fill="#190606" stroke="#3a2a18" stroke-width=".12"/>
+    <text id="hundZahl" x="0" y="-4.35" text-anchor="middle" font-size="1.35" font-family="Courier New,monospace" font-weight="700" fill="#ff3a24" filter="url(#glimm)">00:00</text>
+  </g></g>
+  <path id="hundL" d="M-25.6,8 L-23.4,6.4 L-23.4,9.6 Z" fill="#e9c66d" opacity="0"/>
+  <path id="hundR" d="M25.6,8 L23.4,6.4 L23.4,9.6 Z" fill="#e9c66d" opacity="0"/>
   <!-- Vergrößerung, halbtransparent im Okular -->
   <text id="zoomwert" x="0" y="22.5" text-anchor="middle" font-size="2.1" fill="#f1e2b0" opacity=".55" font-family="Georgia,serif" letter-spacing=".15">×1,0</text>
   <circle id="ziel" r="10" fill="none" stroke="#9be07f" stroke-width=".5" stroke-dasharray="1.2 .8" opacity="0"/>
@@ -181,7 +190,7 @@ body.trueb #hierroBild{filter:url(#wisch)}
   <div id="zeile1"><span id="gon">–––</span></div>
   <div id="hoehe" class="gravur">Höhenwinkel –</div>
   <div id="meldung"></div>
-  <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button></div>
+  <div class="knoepfe"><button id="messen">Messen</button><button id="zeigeProtokoll">Protokoll</button><button id="beiFuss" style="display:none">Bei Fuß, messen!</button></div>
   <div id="rad" title="Trieb: hoch = näher"><div id="rolle"></div></div>
 </div>
 
@@ -224,6 +233,9 @@ let glX = null, glY = null;
 let ort = null, genauigkeit = null;
 let stationen = [], schluesselOk = false, aktuelleStation = null, letzteBestaetigung = 0;
 let zuege = {}, zug = null, zugIndex = 0, stabX = null;
+// Messhund (Nutzerin 11.11.): nach MESSRAD.BAS am Terminal. Misst gerade Linie ab der Marke, in Werkschuh.
+let messhund = null, hundMarke = null, hundX = null, hundFertig = false;
+const HUND_ABSTAND = 2.5, HUND_HOEHE = 0.55, WERKSCHUH = 0.296;   // gross genug, dass man das Zählwerk lesen kann
 // Herr G. im Okular (Nutzerin 11.11.): einmal je Spiel, wenn man auf dem Weg zu Punkt 4 den Stab anpeilt
 const G_PUNKT = 3;
 let gAuftritt = null;   // null = noch nicht, Zahl = Startzeit, "fertig"
@@ -278,6 +290,9 @@ async function stationenLaden() {
     const daten = JSON.parse(new TextDecoder().decode(klar));
     stationen = daten.stationen || [];
     zuege = daten.zuege || {};
+    messhund = hashTeil(2) === "N" && daten.messhund ? daten.messhund : null;
+    $("beiFuss").style.display = messhund ? "" : "none";
+    try { const m = JSON.parse(localStorage.getItem("theoHund") || "null"); if (m) { hundMarke = m.marke; hundFertig = !!m.fertig; } } catch (e) {}
     zugStarten();
     schluesselOk = true;
     document.body.classList.remove("trueb");
@@ -545,6 +560,43 @@ function zugZeichnen() {
   return d;
 }
 
+function hundZeichnen() {
+  const g = $("hund");
+  if (!messhund || !schluesselOk || !ort || richtungGrad === null) { g.setAttribute("opacity", "0"); $("hundL").setAttribute("opacity", "0"); $("hundR").setAttribute("opacity", "0"); return; }
+  const proGrad = 54 / (FELD_GRAD / zoom);
+  const diff = ((messhund.richtung_gon / GON - richtungGrad) % 360 + 540) % 360 - 180;   // er läuft immer in Richtung der Anweisung
+  const xSoll = diff * proGrad;
+  hundX = hundX === null ? xSoll : hundX + (xSoll - hundX) * 0.15;
+  const fuss = ((hoeheGrad || 0) + Math.atan(AUGHOEHE / HUND_ABSTAND) * 180 / Math.PI) * proGrad;   // auf dem Boden: nur schräg nach unten sichtbar
+  const groesse = Math.atan(HUND_HOEHE / HUND_ABSTAND) * 180 / Math.PI * proGrad / 10;
+  g.setAttribute("transform", `translate(${hundX.toFixed(2)},${fuss.toFixed(2)}) scale(${groesse.toFixed(3)})`);
+  g.setAttribute("opacity", "1");
+  $("hundL").setAttribute("opacity", hundX < -26 ? ".9" : "0");
+  $("hundR").setAttribute("opacity", hundX > 26 ? ".9" : "0");
+  let ws = hundMarke ? abstand(hundMarke, ort) / WERKSCHUH : 0;
+  if (hundMarke && !hundFertig && ws >= messhund.ziel_ws - 4) {
+    hundFertig = true;
+    try { localStorage.setItem("theoHund", JSON.stringify({ marke: hundMarke, fertig: true })); } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+    const m = $("meldung"); m.dataset.fest = "1"; m.className = "gut";
+    m.textContent = "N0-STR setzt sich und bellt zweimal. 400 Werkschuh. Hier ist es.";
+    setTimeout(() => { m.dataset.fest = ""; }, 6000);
+  }
+  if (hundFertig) ws = messhund.ziel_ws;
+  const z = String(Math.min(9999, Math.round(ws))).padStart(4, "0");
+  const blink = hundFertig && Math.floor(performance.now() / 500) % 2;
+  $("hundZahl").textContent = blink ? "  :  " : z.slice(0, 2) + ":" + z.slice(2);
+}
+$("beiFuss").onclick = () => {
+  if (!ort) return;
+  hundMarke = { lat: ort.lat, lon: ort.lon }; hundFertig = false;
+  try { localStorage.setItem("theoHund", JSON.stringify({ marke: hundMarke, fertig: false })); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(60);
+  const m = $("meldung"); m.dataset.fest = "1"; m.className = "station";
+  m.textContent = "Bei Fuß! N0-STR stellt sich in Richtung " + messhund.richtung_gon + " Gon. Zählwerk auf null. Halten Sie das Okular schräg nach unten.";
+  setTimeout(() => { m.dataset.fest = ""; }, 6000);
+};
+
 let zitter = 0;
 function trueb() { return !schluesselOk; }
 function angezeigtGon() {   // trübes Glas: die Ablesung schwimmt um ein paar Gon
@@ -583,6 +635,7 @@ function tick(zeit) {
     m.className = "station";
     m.textContent = `El Hierro · ${Math.round(km).toLocaleString("de-DE")} km · ${(km / 0.000296 / 1e6).toFixed(1).replace(".", ",")} Mio. Werkschuh · Ex Ferro lux!`;
   } else if (m.dataset.fest !== "1") { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
+  hundZeichnen();
   const zugAbstand = zugZeichnen();
   if (zug && typeof zugAbstand === "number" && zugAbstand > 120 && m.dataset.fest !== "1" && !aktuelleStation) {
     m.className = "station"; m.textContent = "Sie sind aus dem Blatt gelaufen. Zurück zum letzten Punkt.";
