@@ -60,6 +60,7 @@ button:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4
 body.trueb #video{filter:blur(7px) saturate(.35) brightness(1.15) contrast(.7)}
 #schmutz{opacity:0;transition:opacity 1.5s}
 body.trueb #schmutz{opacity:1}
+body.trueb #hierroBild{filter:url(#wisch)}
 #sim{position:fixed;top:40px;left:10px;right:10px;background:rgba(20,14,8,.88);border:1px dashed var(--messing);padding:8px;font:12px "Courier New",monospace;display:none;z-index:5}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:9em;font:inherit}
@@ -399,7 +400,7 @@ function lotZeichnen(zeit) {
     const nah = st.radius;
     ziel = naechste <= nah ? 0 : 22 * Math.min(1, (naechste - nah) / (reichweite - nah));   // Grad Ausschlag
   }
-  const ferro = !trueb() && zieltAufFerro();
+  const ferro = zieltAufFerro();   // El Hierro winkt auch durchs trübe Glas, nur verschwommen
   if (ferro) { sicht = 1; ziel = 38; }                 // Ferro zieht: das Lot spielt verrückt
   lotAusschlag += (ziel - lotAusschlag) * (ferro ? 0.08 : 0.03);
   lotSichtbar += (sicht - lotSichtbar) * 0.04;
@@ -439,6 +440,8 @@ function tick(zeit) {
       m.className = "gut"; m.textContent = "Peilung stimmt. " + aktuelleStation.name + ".";
       if (Date.now() - letzteBestaetigung > 4000) { letzteBestaetigung = Date.now(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]); }
     } else { m.className = "station"; m.textContent = aktuelleStation.text; }
+  } else if (trueb() && zieltAufFerro() && m.dataset.fest !== "1") {
+    m.className = "station"; m.textContent = "Hinter dem Schleier winkt jemand. Ganz fern: „Putzen Sie die Linse! Der Pförtner hat ein Tuch, er staubt jeden Montag ab.“";
   } else if (trueb() && m.dataset.fest !== "1") {
     m.className = "station"; m.textContent = "Das Glas ist trüb. Man sieht kaum etwas.";
   } else if (zieltAufFerro() && m.dataset.fest !== "1") {
