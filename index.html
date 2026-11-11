@@ -149,6 +149,12 @@ body.trueb #hierroBild{filter:url(#wisch)}
     <path id="pfeilL" d="M-25.6,0 L-23.4,-1.6 L-23.4,1.6 Z" fill="#c8442f" opacity="0"/>
     <path id="pfeilR" d="M25.6,0 L23.4,-1.6 L23.4,1.6 Z" fill="#c8442f" opacity="0"/>
   </g>
+  <!-- Am Ende des Zuges (Nutzerin 11.11.): Auf dem Display des Terminals leuchtet im Okular unsere BTX-Seite -->
+  <filter id="btxGlimm" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation=".4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <g clip-path="url(#glasrand)"><g id="btxSchirm" opacity="0">
+    <rect x="-5.4" y="-5.4" width="10.8" height="10.8" rx=".4" fill="#0a0a1a" opacity=".6"/>
+    <image href="btx_menue.gif" x="-5" y="-5" width="10" height="10" filter="url(#btxGlimm)" opacity=".92"/>
+  </g></g>
   <!-- Messhund N0-STR: läuft auf dem Boden voraus, Zählwerk in Werkschuh auf dem Hinterteil (#SCHLÜSSEL/1740/N) -->
   <filter id="glimm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation=".25" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <g clip-path="url(#glasrand)"><g id="hund" opacity="0">
@@ -533,7 +539,7 @@ function zugZeichnen() {
       zugIndex = j + 1; zugSpeicher(zugIndex); stabX = null;
       if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
       const m = $("meldung"); m.dataset.fest = "1"; m.className = "gut";
-      m.textContent = zugIndex >= zug.length ? "Ende des Zuges." : `Punkt ${zugIndex + 1} erreicht. Neu ansetzen.`;
+      m.textContent = zugIndex >= zug.length ? "Ende des Zuges. Da vorne leuchtet etwas." : `Punkt ${zugIndex + 1} erreicht. Neu ansetzen.`;
       setTimeout(() => { m.dataset.fest = ""; }, 3500);
       break;
     }
@@ -560,6 +566,24 @@ function zugZeichnen() {
   return d;
 }
 
+// BTX-Bildschirm über dem echten Terminal: letzter Punkt des Zuges, Display etwa 1,3 m hoch, 0,5 m breit
+const BTX_HOEHE = 1.3, BTX_BREITE = 0.5, BTX_SICHT = 45;
+let btxX = null;
+function btxSchirmZeichnen() {
+  const g = $("btxSchirm");
+  if (!zug || !schluesselOk || !ort || richtungGrad === null || zugIndex < zug.length) { g.setAttribute("opacity", "0"); return; }
+  const ziel = zug[zug.length - 1], d = Math.max(1.5, abstand(ort, ziel));
+  if (d > BTX_SICHT) { g.setAttribute("opacity", "0"); return; }
+  const proGrad = 54 / (FELD_GRAD / zoom);
+  const diff = ((peilungZu(ort, ziel) / GON - richtungGrad) % 360 + 540) % 360 - 180;
+  const xSoll = diff * proGrad;
+  btxX = btxX === null ? xSoll : btxX + (xSoll - btxX) * 0.15;
+  const y = ((hoeheGrad || 0) + Math.atan((AUGHOEHE - BTX_HOEHE) / d) * 180 / Math.PI) * proGrad;
+  const breite = Math.min(34, Math.atan(BTX_BREITE / d) * 180 / Math.PI * proGrad);
+  const flackern = 0.82 + 0.08 * Math.sin(performance.now() / 70) * (Math.random() < 0.05 ? 3 : 1);
+  g.setAttribute("transform", `translate(${btxX.toFixed(2)},${y.toFixed(2)}) scale(${(breite / 10).toFixed(3)})`);
+  g.setAttribute("opacity", (Math.abs(btxX) < 30 ? flackern : 0).toFixed(2));
+}
 function hundZeichnen() {
   const g = $("hund");
   if (!messhund || !schluesselOk || !ort || richtungGrad === null) { g.setAttribute("opacity", "0"); $("hundL").setAttribute("opacity", "0"); $("hundR").setAttribute("opacity", "0"); return; }
@@ -636,6 +660,7 @@ function tick(zeit) {
     m.textContent = `El Hierro · ${Math.round(km).toLocaleString("de-DE")} km · ${(km / 0.000296 / 1e6).toFixed(1).replace(".", ",")} Mio. Werkschuh · Ex Ferro lux!`;
   } else if (m.dataset.fest !== "1") { zielKreis.setAttribute("opacity", "0"); m.className = ""; m.textContent = ""; }
   hundZeichnen();
+  btxSchirmZeichnen();
   const zugAbstand = zugZeichnen();
   if (zug && typeof zugAbstand === "number" && zugAbstand > 120 && m.dataset.fest !== "1" && !aktuelleStation) {
     m.className = "station"; m.textContent = "Sie sind aus dem Blatt gelaufen. Zurück zum letzten Punkt.";
