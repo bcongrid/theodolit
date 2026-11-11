@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b1712">
+<title>Kassettenspieler WK-97</title>
+<style>
+:root{--grau:#b9b4a8;--grau-d:#8d887c;--grau-h:#d8d3c6;--schwarz:#1b1712;--rot:#c8442f;--papier:#efe6cf;--tinte:#2a2418}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--schwarz);color:var(--papier);font-family:Georgia,serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#geraet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,420px);padding:18px 16px 20px;border-radius:22px;
+  background:linear-gradient(160deg,var(--grau-h),var(--grau) 40%,var(--grau-d));box-shadow:0 0 0 2px #5a564c,inset 0 2px 0 #f2eee4,inset 0 -4px 10px rgba(0,0,0,.25),0 14px 40px rgba(0,0,0,.7)}
+#kopf{display:flex;justify-content:space-between;align-items:baseline;font:600 12px/1 "Courier New",monospace;color:#3d392f;letter-spacing:.12em;margin:0 4px 10px}
+#kopf b{font:italic 700 17px Georgia,serif;letter-spacing:.04em;color:#2a261d}
+#led{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4a1a12;margin-left:6px;box-shadow:inset 0 0 2px #000;vertical-align:middle}
+#led.an{background:#ff4a2e;box-shadow:0 0 8px #ff4a2e}
+#fenster{position:relative;border-radius:12px;background:#24201a;padding:10px;box-shadow:inset 0 3px 10px #000}
+#klappe{transition:transform .45s ease;transform-origin:50% 0}
+#klappe.offen{transform:perspective(600px) rotateX(38deg)}
+svg{display:block;width:100%;height:auto}
+#zaehler{display:flex;justify-content:center;gap:10px;align-items:center;margin:12px 0 4px}
+#ziffern{display:flex;gap:2px;padding:3px 4px;background:#111;border-radius:4px;box-shadow:inset 0 1px 3px #000}
+#ziffern span{display:block;width:18px;text-align:center;font:700 19px/1.25 "Courier New",monospace;color:#f2ead2;background:linear-gradient(#000,#2c2c2c 50%,#000)}
+#null{font:600 10px "Courier New",monospace;border:0;border-radius:50%;width:26px;height:26px;background:linear-gradient(#ddd8cb,#9a9588);color:#2a261d;box-shadow:0 2px 0 #5a564c}
+#tasten{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.taste{height:52px;border:0;border-radius:8px;font:700 15px "Courier New",monospace;color:#2a261d;cursor:pointer;
+  background:linear-gradient(#e6e1d4,#a9a498);box-shadow:0 5px 0 #5a564c,0 6px 10px rgba(0,0,0,.4);transition:transform .05s,box-shadow .05s}
+.taste small{display:block;font-size:9px;letter-spacing:.08em;font-weight:600}
+.taste.unten{transform:translateY(4px);box-shadow:0 1px 0 #5a564c,0 2px 4px rgba(0,0,0,.4)}
+#play{color:#7a1d0f}
+#kassette{display:none;margin-top:14px;text-align:center}
+#kassette.zeigen{display:block}
+#kassette button{margin:6px 4px 0;height:42px;padding:0 16px;border:0;border-radius:8px;font:700 14px Georgia,serif;background:var(--papier);color:var(--tinte);box-shadow:0 3px 0 #6d6450}
+#hinweis{text-align:center;font:italic 13px Georgia,serif;color:#c9bf9f;min-height:1.4em;margin-top:12px}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,8,5,.92);z-index:5}
+#start .karte{max-width:340px;padding:20px;border-radius:10px;background:var(--papier);color:var(--tinte);text-align:center;box-shadow:0 0 0 2px #6d6450,0 10px 30px #000}
+#start h1{font-size:20px;margin:0 0 8px}
+#start p{font-size:14px;line-height:1.45;margin:6px 0}
+#start button{margin-top:10px;height:46px;padding:0 22px;border:0;border-radius:8px;font:700 16px Georgia,serif;background:#2a2418;color:var(--papier)}
+</style>
+</head>
+<body>
+<div id="start"><div class="karte">
+  <h1>Kopfhörer auf</h1>
+  <p>Ein Kassettenspieler, Baujahr 1997. Die Kassette steckt schon drin.</p>
+  <p>Am besten mit Kopfhörern hören, und das Telefon in die Tasche.</p>
+  <button id="los">Einschalten</button>
+  <p id="laden" style="font-size:12px;opacity:.7"></p>
+</div></div>
+
+<div id="geraet">
+  <div id="kopf"><span>STEREO CASSETTE PLAYER</span><span><b>WK-97</b><span id="led"></span></span></div>
+  <div id="fenster"><div id="klappe">
+    <svg id="band" viewBox="0 0 300 180" aria-label="Kassette">
+      <defs>
+        <linearGradient id="gehaeuse" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3530"/><stop offset="1" stop-color="#1f1c18"/></linearGradient>
+        <radialGradient id="wickel"><stop offset=".55" stop-color="#5b3a1f"/><stop offset="1" stop-color="#3a220f"/></radialGradient>
+      </defs>
+      <rect x="4" y="4" width="292" height="172" rx="10" fill="url(#gehaeuse)" stroke="#000"/>
+      <!-- Etikett -->
+      <rect x="18" y="14" width="264" height="104" rx="5" fill="#efe6cf"/>
+      <rect x="18" y="14" width="264" height="18" rx="5" fill="#c8442f" id="streifen"/>
+      <text id="seite" x="30" y="28" font-family="Georgia,serif" font-weight="700" font-size="13" fill="#efe6cf">A</text>
+      <text x="270" y="28" text-anchor="end" font-family="Courier New,monospace" font-size="10" fill="#efe6cf">C15</text>
+      <text id="titel" x="150" y="50" text-anchor="middle" font-family="Segoe Print,Bradley Hand,Comic Sans MS,cursive" font-size="13" fill="#2a2418">Mirko 97 · slowenische Lieder</text>
+      <!-- Sichtfenster -->
+      <rect x="62" y="60" width="176" height="50" rx="24" fill="#16130f" stroke="#000"/>
+      <circle id="wickelL" cx="100" cy="85" r="22" fill="url(#wickel)"/>
+      <circle id="wickelR" cx="200" cy="85" r="14" fill="url(#wickel)"/>
+      <rect x="132" y="70" width="36" height="30" fill="#2b2620" opacity=".9"/>
+      <g id="spuleL" transform="translate(100,85)"><circle r="11" fill="#e9e3d4"/><circle r="5" fill="#16130f"/><g fill="#16130f"><rect x="-1.5" y="-8.5" width="3" height="4"/><rect x="-1.5" y="4.5" width="3" height="4"/><rect x="-8.5" y="-1.5" width="4" height="3"/><rect x="4.5" y="-1.5" width="4" height="3"/></g></g>
+      <g id="spuleR" transform="translate(200,85)"><circle r="11" fill="#e9e3d4"/><circle r="5" fill="#16130f"/><g fill="#16130f"><rect x="-1.5" y="-8.5" width="3" height="4"/><rect x="-1.5" y="4.5" width="3" height="4"/><rect x="-8.5" y="-1.5" width="4" height="3"/><rect x="4.5" y="-1.5" width="4" height="3"/></g></g>
+      <!-- unten: Bandführung -->
+      <path d="M40,176 L56,132 L244,132 L260,176" fill="#2a2620" stroke="#000"/>
+      <circle cx="80" cy="152" r="6" fill="#111"/><circle cx="220" cy="152" r="6" fill="#111"/>
+      <rect x="132" y="150" width="36" height="10" fill="#5b3a1f"/>
+    </svg>
+  </div></div>
+  <div id="zaehler"><div id="ziffern"><span>0</span><span>0</span><span>0</span></div><button id="null" title="Zählwerk auf null">0</button></div>
+  <div id="tasten">
+    <button class="taste" id="rew">◀◀<small>REW</small></button>
+    <button class="taste" id="ff">▶▶<small>FF</small></button>
+    <button class="taste" id="play">▶<small>PLAY</small></button>
+    <button class="taste" id="stop">■<small>STOP/EJECT</small></button>
+  </div>
+  <div id="kassette">
+    <button id="wenden">Kassette wenden</button><button id="zu">Klappe zu</button>
+  </div>
+  <div id="hinweis"></div>
+</div>
+
+<script>
+"use strict";
+// ---------- Band ----------
+// C15: 7,5 min je Seite. Eine Kassette: Seite B läuft rückwärts über dasselbe Band.
+// pos = Bandstelle in Sekunden, gezählt auf Seite A (0 = Anfang A = Ende B).
+const LAENGE = 450, SPUL = 7, R_MIN = 11, R_MAX = 25;   // Spulen in SVG-Einheiten
+const $ = (id) => document.getElementById(id);
+let ctx = null, puffer = { A: null, B: null }, rueck = { A: null, B: null }, rauschPuffer = null;
+let seite = "A", pos = 0, modus = "stop", quelle = null, rauschen = null, t0 = 0, p0 = 0, rate = 0;
+let nullStelle = 0, winkelL = 0, winkelR = 0, offen = false, gespeichert = false;
+// Mirkos Lied liegt auf den letzten Metern von Seite A, die Kassette steckt kurz davor. Läuft es aus und man wendet,
+// steht Seite B genau am Anfang: Hierro. (Wie bei einer echten Kassette, Seite B ist dasselbe Band rückwärts.)
+const versatz = { A: 0, B: 0 };
+
+function speichern() { try { localStorage.setItem("wk97", JSON.stringify({ seite, pos, nullStelle })); } catch (e) {} }
+function laden() { try { const d = JSON.parse(localStorage.getItem("wk97") || "null"); if (d) { seite = d.seite === "B" ? "B" : "A"; pos = +d.pos || 0; nullStelle = +d.nullStelle || 0; gespeichert = true; } } catch (e) {} }
+
+function seitenPos() { return seite === "A" ? pos : LAENGE - pos; }   // Sekunden ab Anfang der eingelegten Seite
+function jetztPos() {
+  if (modus === "stop") return pos;
+  const d = (ctx.currentTime - t0) * rate;               // rate in Bandsekunden je Sekunde, Vorzeichen = Richtung auf der Seite
+  const sp = Math.max(0, Math.min(LAENGE, (seite === "A" ? p0 : LAENGE - p0) + d));
+  return seite === "A" ? sp : LAENGE - sp;
+}
+
+async function holen(name) {
+  const r = await fetch(name); const b = await r.arrayBuffer();
+  return await ctx.decodeAudioData(b);
+}
+function umdrehen(buf) {
+  const n = ctx.createBuffer(1, buf.length, buf.sampleRate), a = buf.getChannelData(0), z = n.getChannelData(0);
+  for (let i = 0; i < a.length; i++) z[i] = a[a.length - 1 - i];
+  return n;
+}
+function klick(laut = 0.5) {
+  if (!ctx) return;
+  const b = ctx.createBuffer(1, 700, ctx.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 90) * laut;
+  const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start();
+}
+function rauschAn(laut) {
+  if (!rauschPuffer) {
+    rauschPuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const d = rauschPuffer.getChannelData(0); let v = 0;
+    for (let i = 0; i < d.length; i++) { v = v * 0.6 + (Math.random() * 2 - 1) * 0.4; d[i] = v; }
+  }
+  rauschen = ctx.createBufferSource(); rauschen.buffer = rauschPuffer; rauschen.loop = true;
+  const g = ctx.createGain(); g.gain.value = laut; rauschen.connect(g).connect(ctx.destination); rauschen.start();
+}
+
+function anhalten() {
+  if (modus !== "stop") pos = jetztPos();
+  if (quelle) { try { quelle.stop(); } catch (e) {} quelle = null; }
+  if (rauschen) { try { rauschen.stop(); } catch (e) {} rauschen = null; }
+  modus = "stop"; rate = 0; tastenZeigen(); speichern();
+}
+function starten(m) {
+  if (!ctx || offen) return;
+  anhalten();
+  const sp = seitenPos();
+  if (m !== "rew" && sp >= LAENGE - 0.05) { klick(0.8); hinweis("Das Band ist zu Ende."); return; }
+  if (m === "rew" && sp <= 0.05) { klick(0.8); hinweis("Das Band ist ganz zurückgespult."); return; }
+  modus = m; rate = m === "play" ? 1 : m === "ff" ? SPUL : -SPUL;
+  p0 = pos; t0 = ctx.currentTime;
+  const buf = puffer[seite], ab = sp - versatz[seite];   // Stelle in der Aufnahme
+  const g = ctx.createGain(); g.gain.value = m === "play" ? 1 : 0.22;
+  if (m === "rew") {
+    const rb = rueck[seite] || (rueck[seite] = umdrehen(buf));
+    const off = buf.duration - Math.min(ab, buf.duration);
+    if (ab > 0 && off < rb.duration) { quelle = ctx.createBufferSource(); quelle.buffer = rb; quelle.playbackRate.value = SPUL; quelle.connect(g).connect(ctx.destination); quelle.start(ctx.currentTime + Math.max(0, ab - buf.duration) / SPUL, off); }
+  } else if (ab < buf.duration) {
+    quelle = ctx.createBufferSource(); quelle.buffer = buf; quelle.playbackRate.value = m === "play" ? 1 : SPUL;
+    const vorlauf = Math.max(0, -ab) / quelle.playbackRate.value;   // noch vor der Aufnahme: erst Rauschen
+    quelle.connect(g).connect(ctx.destination); quelle.start(ctx.currentTime + vorlauf, Math.max(0, ab));
+  }
+  rauschAn(m === "play" ? 0.012 : 0.03);
+  klick(0.6); tastenZeigen();
+}
+function tastenZeigen() {
+  for (const k of ["play", "ff", "rew"]) $(k).classList.toggle("unten", modus === k);
+  $("led").classList.toggle("an", modus === "play");
+}
+function hinweis(t) { $("hinweis").textContent = t; clearTimeout(hinweis.z); hinweis.z = setTimeout(() => { $("hinweis").textContent = ""; }, 4000); }
+
+// ---------- Spulen, Wickel, Zählwerk ----------
+function radius(anteil) { return Math.sqrt(R_MIN * R_MIN + anteil * (R_MAX * R_MAX - R_MIN * R_MIN)); }
+function umdrehungen(sp) {   // Umdrehungen der Aufwickelspule seit Anfang der Seite (wie ein echtes Zählwerk)
+  return (radius(sp / LAENGE) - R_MIN) / (R_MAX - R_MIN) * 190;
+}
+let letzteZeit = performance.now();
+function bild(zeit) {
+  const dt = Math.min(0.1, (zeit - letzteZeit) / 1000); letzteZeit = zeit;
+  if (modus !== "stop") {
+    const p = jetztPos(); const sp = seite === "A" ? p : LAENGE - p;
+    if ((rate > 0 && sp >= LAENGE - 0.02) || (rate < 0 && sp <= 0.02)) { pos = p; anhalten(); klick(0.9); hinweis(rate > 0 ? "Auto-Stop." : "Zurückgespult."); }
+  }
+  const p = modus === "stop" ? pos : jetztPos();
+  const sp = seite === "A" ? p : LAENGE - p;               // auf der eingelegten Seite: links abwickeln, rechts aufwickeln
+  const rL = radius(1 - sp / LAENGE), rR = radius(sp / LAENGE);
+  $("wickelL").setAttribute("r", rL.toFixed(2)); $("wickelR").setAttribute("r", rR.toFixed(2));
+  const v = rate * 2.2;                                     // Bandgeschwindigkeit in SVG-Einheiten je Sekunde
+  winkelL += v / rL * dt * 57.3; winkelR += v / rR * dt * 57.3;
+  $("spuleL").setAttribute("transform", `translate(100,85) rotate(${winkelL % 360})`);
+  $("spuleR").setAttribute("transform", `translate(200,85) rotate(${winkelR % 360})`);
+  let z = Math.floor(umdrehungen(sp) * 2.4 - nullStelle) % 1000; if (z < 0) z += 1000;
+  const s = String(z).padStart(3, "0"), sp3 = $("ziffern").children;
+  for (let i = 0; i < 3; i++) if (sp3[i].textContent !== s[i]) sp3[i].textContent = s[i];
+  requestAnimationFrame(bild);
+}
+
+// ---------- Seite und Klappe ----------
+function etikett() {
+  $("seite").textContent = seite;
+  $("streifen").setAttribute("fill", seite === "A" ? "#c8442f" : "#2f5a8a");
+  $("titel").textContent = seite === "A" ? "Mirko 97 · slowenische Lieder" : "für Augsburg · H. u. P. · Seite B";
+}
+$("play").onclick = () => starten("play");
+$("ff").onclick = () => starten("ff");
+$("rew").onclick = () => starten("rew");
+$("stop").onclick = () => {
+  if (modus !== "stop") { anhalten(); klick(0.6); return; }
+  offen = !offen; klick(0.9);
+  $("klappe").classList.toggle("offen", offen); $("kassette").classList.toggle("zeigen", offen);
+  hinweis(offen ? "Die Klappe springt auf." : "");
+};
+$("wenden").onclick = () => {
+  seite = seite === "A" ? "B" : "A"; klick(0.4); etikett(); speichern();
+  hinweis("Seite " + seite + " oben.");
+};
+$("zu").onclick = () => { offen = false; klick(0.9); $("klappe").classList.remove("offen"); $("kassette").classList.remove("zeigen"); };
+$("null").onclick = () => {
+  const p = modus === "stop" ? pos : jetztPos(); const sp = seite === "A" ? p : LAENGE - p;
+  nullStelle = Math.floor(umdrehungen(sp) * 2.4); klick(0.3); speichern();
+};
+
+$("los").onclick = async () => {
+  $("laden").textContent = "Batterien rein …";
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    [puffer.A, puffer.B] = await Promise.all([holen("seite_a.wav"), holen("seite_b.wav")]);
+  } catch (e) { $("laden").textContent = "Die Kassette klemmt. Bitte neu laden."; return; }
+  versatz.A = Math.max(0, LAENGE - puffer.A.duration - 1);
+  if (!gespeichert) { seite = "A"; pos = versatz.A - 2; etikett(); }
+  $("start").style.display = "none";
+  klick(0.5);
+};
+document.addEventListener("visibilitychange", () => { if (document.hidden && modus !== "play") anhalten(); });
+laden(); etikett(); requestAnimationFrame(bild);
+</script>
+</body>
+</html>
