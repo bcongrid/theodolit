@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2a2418">
+<title>Stadtplan 1997</title>
+<style>
+:root{--papier:#f6eed6;--tinte:#2a2418;--leiste:#3a3226;--messing:#d1a64c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#2a2418;color:var(--papier);font-family:Georgia,serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#fenster{position:absolute;inset:0 0 64px 0;overflow:hidden;background:#3a3226}
+#buehne{position:absolute;left:0;top:0;transform-origin:0 0}
+#plan{display:block;pointer-events:none}
+#pause{position:absolute;left:0;top:0;transform-origin:50% 50%;cursor:grab;opacity:.92;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+#pause.liegt{outline:3px solid rgba(80,140,60,.6);cursor:default}
+#scheibe{position:absolute;left:0;top:0;display:none}
+#leiste{position:absolute;left:0;right:0;bottom:0;height:64px;display:flex;gap:6px;align-items:center;justify-content:center;padding:6px;background:var(--leiste);border-top:2px solid #000}
+#leiste button{height:48px;min-width:48px;padding:0 10px;border:0;border-radius:8px;font:700 15px Georgia,serif;color:var(--tinte);background:linear-gradient(#f3e3b0,#c9a35a);box-shadow:0 3px 0 #5b4214}
+#leiste button.an{background:linear-gradient(#e6d6a6,#a98a45);transform:translateY(2px);box-shadow:0 1px 0 #5b4214}
+#meldung{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:92vw;padding:8px 14px;border-radius:8px;background:rgba(42,36,24,.88);font:italic 15px Georgia,serif;text-align:center;pointer-events:none;transition:opacity .4s}
+#ablesung{position:absolute;right:10px;top:56px;padding:6px 10px;border-radius:8px;background:rgba(42,36,24,.88);font:700 16px "Courier New",monospace;display:none}
+</style>
+</head>
+<body>
+<div id="fenster"><div id="buehne">
+  <img id="plan" src="plan.png" alt="Stadtplan Augsburg Universität, Stil 1997">
+  <img id="pause" alt="Pauspapier" style="display:none" draggable="false">
+  <svg id="scheibe" width="340" height="340" viewBox="-170 -170 340 340"></svg>
+</div></div>
+<div id="meldung">Stadtplan 1997. Das Pauspapier liegt daneben.</div>
+<div id="ablesung"></div>
+<div id="leiste">
+  <button id="rl" title="Pause nach links drehen">⟲</button>
+  <button id="rr" title="Pause nach rechts drehen">⟳</button>
+  <button id="zp">＋</button>
+  <button id="zm">－</button>
+  <button id="gs">Gon-Scheibe</button>
+</div>
+<script src="pause.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const PX_WS = 1.6 * 0.296;                      // Pixel je Werkschuh (wie im Zeichenwerkzeug)
+const fenster = $("fenster"), buehne = $("buehne"), pauseBild = $("pause");
+let zoom = 1, panX = 0, panY = 0, meta = null;
+let p = { x: 0, y: 0, rot: 0 }, liegt = false;
+
+function meld(t, dauer = 4000) { const m = $("meldung"); m.textContent = t; m.style.opacity = 1; clearTimeout(meld.z); if (dauer) meld.z = setTimeout(() => m.style.opacity = 0, dauer); }
+function buehneSetzen() { buehne.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`; }
+function pauseSetzen() { pauseBild.style.transform = `translate(${p.x}px,${p.y}px) rotate(${p.rot}deg)`; }
+
+// ---------- Pauspapier entschlüsseln (Schlüssel = Code aus der Bibliothek, steht hinter # in der Adresse) ----------
+function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+async function pauseLaden() {
+  const k = decodeURIComponent(location.hash.slice(1) || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!k || !window.PAUSE_DATEN) { meld("Stadtplan 1997. Ohne den Code aus der Bibliothek fehlt das Pauspapier.", 0); return; }
+  try {
+    const d = window.PAUSE_DATEN;
+    const basis = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(d.salz), iterations: d.runden, hash: "SHA-256" }, basis, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const klar = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten))));
+    meta = klar.meta;
+    pauseBild.src = "data:image/png;base64," + klar.png;
+    pauseBild.style.display = "";
+    p = { x: meta.soll[0] + 260, y: meta.soll[1] + 170, rot: 23 };   // liegt erst schief daneben
+    try { const g = JSON.parse(localStorage.getItem("planPause") || "null"); if (g) { p = g.p; liegt = g.liegt; } } catch (e) {}
+    pauseSetzen(); pauseBild.classList.toggle("liegt", liegt);
+    meld(liegt ? "Die Pause liegt." : "Das Pauspapier der Kartografin. Legen Sie es so auf, dass der Zug auf den Wegen liegt.", 6000);
+  } catch (e) { meld("Dieser Code passt zu keinem Pauspapier.", 0); }
+}
+function pruefen() {
+  if (!meta || liegt) return;
+  const dw = ((p.rot % 360) + 540) % 360 - 180;
+  if (Math.abs(p.x - meta.soll[0]) < 18 && Math.abs(p.y - meta.soll[1]) < 18 && Math.abs(dw) < 3) {
+    p = { x: meta.soll[0], y: meta.soll[1], rot: 0 }; liegt = true; pauseSetzen();
+    pauseBild.classList.add("liegt");
+    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+    meld("Die Pause liegt. Punkt 1 auf der Institutstür, Punkt 8 am Terminal. Und das Kreuz …", 7000);
+  }
+  try { localStorage.setItem("planPause", JSON.stringify({ p, liegt })); } catch (e) {}
+}
+
+// ---------- Ziehen, Drehen, Verschieben des Plans ----------
+const zeiger = new Map(); let ziel = null, start = null;
+function welt(e) { return { x: (e.clientX - panX) / zoom, y: (e.clientY - panY) / zoom }; }
+fenster.addEventListener("pointerdown", (e) => {
+  fenster.setPointerCapture(e.pointerId);
+  zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zeiger.size === 1) {
+    ziel = e.target === pauseBild && !liegt ? "pause" : e.target.closest && e.target.closest("#scheibe") ? (e.target.dataset.griff || "scheibe") : "plan";
+    start = { x: e.clientX, y: e.clientY, p: { ...p }, panX, panY, s: { ...scheibe } };
+  } else if (zeiger.size === 2 && ziel === "pause") {
+    const [a, b] = [...zeiger.values()];
+    start.winkel = Math.atan2(b.y - a.y, b.x - a.x); start.rot = p.rot;
+  }
+});
+fenster.addEventListener("pointermove", (e) => {
+  if (!zeiger.has(e.pointerId)) return;
+  zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const dx = e.clientX - start.x, dy = e.clientY - start.y;
+  if (zeiger.size === 2 && ziel === "pause" && start.winkel !== undefined) {
+    const [a, b] = [...zeiger.values()];
+    p.rot = start.rot + (Math.atan2(b.y - a.y, b.x - a.x) - start.winkel) * 180 / Math.PI; pauseSetzen(); return;
+  }
+  if (ziel === "pause") { p.x = start.p.x + dx / zoom; p.y = start.p.y + dy / zoom; pauseSetzen(); }
+  else if (ziel === "plan") { panX = start.panX + dx; panY = start.panY + dy; buehneSetzen(); }
+  else if (ziel === "scheibe") { scheibe.x = start.s.x + dx / zoom; scheibe.y = start.s.y + dy / zoom; scheibeZeichnen(); }
+  else if (ziel === "arm") { const w = welt(e); scheibe.ax = w.x; scheibe.ay = w.y; scheibeZeichnen(); }
+});
+function los(e) { zeiger.delete(e.pointerId); if (zeiger.size === 0) { if (ziel === "pause") pruefen(); ziel = null; } }
+fenster.addEventListener("pointerup", los); fenster.addEventListener("pointercancel", los);
+function drehen(g) { if (liegt || !meta) return; p.rot += g; pauseSetzen(); pruefen(); }
+function halten(knopf, f) { let t; knopf.addEventListener("pointerdown", () => { f(); t = setInterval(f, 90); }); ["pointerup", "pointerleave", "pointercancel"].forEach(n => knopf.addEventListener(n, () => clearInterval(t))); }
+halten($("rl"), () => drehen(-0.5)); halten($("rr"), () => drehen(0.5));
+function zoomen(f) {
+  const cx = fenster.clientWidth / 2, cy = fenster.clientHeight / 2;
+  const wx = (cx - panX) / zoom, wy = (cy - panY) / zoom;
+  zoom = Math.max(0.2, Math.min(3, zoom * f)); panX = cx - wx * zoom; panY = cy - wy * zoom; buehneSetzen();
+}
+$("zp").onclick = () => zoomen(1.3); $("zm").onclick = () => zoomen(1 / 1.3);
+
+// ---------- Gon-Scheibe (die Pappscheibe aus der Kiste): Mitte auflegen, Arm zum Ziel, Richtung und Werkschuh ablesen ----------
+const scheibe = { x: 0, y: 0, ax: 0, ay: 0, an: false };
+const SVG = "http://www.w3.org/2000/svg";
+(function scheibeBauen() {
+  const s = $("scheibe");
+  let h = `<circle r="150" fill="rgba(246,238,214,.55)" stroke="#5b4214" stroke-width="2"/><circle r="4" fill="#8a2a1a"/>`;
+  for (let g = 0; g < 400; g += 2) {
+    const l = g % 50 === 0 ? 18 : g % 10 === 0 ? 11 : 6, w = g * 0.9 * Math.PI / 180;
+    h += `<line x1="${(150 * Math.sin(w)).toFixed(1)}" y1="${(-150 * Math.cos(w)).toFixed(1)}" x2="${((150 - l) * Math.sin(w)).toFixed(1)}" y2="${(-(150 - l) * Math.cos(w)).toFixed(1)}" stroke="#2a2418" stroke-width="${g % 50 ? 1 : 2}"/>`;
+    if (g % 50 === 0) h += `<text x="${(124 * Math.sin(w)).toFixed(1)}" y="${(-124 * Math.cos(w) + 5).toFixed(1)}" font-size="13" text-anchor="middle" font-family="Georgia" fill="#2a2418">${g}</text>`;
+  }
+  h += `<line id="arm" x1="0" y1="0" x2="0" y2="-150" stroke="#8a2a1a" stroke-width="2.5"/><circle id="armEnde" data-griff="arm" r="12" fill="rgba(138,42,26,.5)" stroke="#8a2a1a" stroke-width="2"/>`;
+  s.innerHTML = h;
+})();
+function scheibeZeichnen() {
+  const s = $("scheibe");
+  s.style.transform = `translate(${scheibe.x - 170}px,${scheibe.y - 170}px)`;
+  const dx = scheibe.ax - scheibe.x, dy = scheibe.ay - scheibe.y;
+  $("arm").setAttribute("x2", dx.toFixed(1)); $("arm").setAttribute("y2", dy.toFixed(1));
+  $("armEnde").setAttribute("cx", dx.toFixed(1)); $("armEnde").setAttribute("cy", dy.toFixed(1));
+  s.setAttribute("overflow", "visible");
+  const gon = ((Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360) / 0.9;
+  const ws = Math.hypot(dx, dy) / PX_WS;
+  $("ablesung").textContent = `${gon.toFixed(1).replace(".", ",")} Gon · ${Math.round(ws)} Werkschuh`;
+}
+$("gs").onclick = () => {
+  scheibe.an = !scheibe.an; $("gs").classList.toggle("an", scheibe.an);
+  $("scheibe").style.display = scheibe.an ? "block" : "none"; $("ablesung").style.display = scheibe.an ? "block" : "none";
+  if (scheibe.an && !scheibe.x) {
+    scheibe.x = (fenster.clientWidth / 2 - panX) / zoom; scheibe.y = (fenster.clientHeight / 2 - panY) / zoom;
+    scheibe.ax = scheibe.x + 60; scheibe.ay = scheibe.y - 120;
+  }
+  scheibeZeichnen();
+  if (scheibe.an) meld("Die Pappscheibe: Mitte verschieben, roten Griff zum Ziel ziehen. Norden ist oben.", 5000);
+};
+
+// ---------- Start ----------
+function planEinpassen() { zoom = Math.min(fenster.clientWidth / $("plan").naturalWidth, 1); panX = 0; panY = (fenster.clientHeight - $("plan").naturalHeight * zoom) / 2; buehneSetzen(); };
+if ($("plan").complete) planEinpassen(); else $("plan").onload = planEinpassen;
+pauseLaden();
+</script>
+</body>
+</html>
