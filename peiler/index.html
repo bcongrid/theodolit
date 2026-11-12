@@ -210,8 +210,8 @@ function audioStarten() {
   const filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 1400; filter.Q.value = 0.6;
   rauschGain = ctx.createGain(); rauschGain.gain.value = 0;
   rq.connect(filter).connect(rauschGain).connect(ctx.destination); rq.start();
-  // Kennung alle 10 s, etwa 8 WpM (langsam, zum Mitlesen)
-  const punkt = 0.15;
+  // Kennung alle 15 s, etwa 5 WpM (sehr langsam, zum Mitlesen)
+  const punkt = 0.24;
   const senden = () => {
     let t = ctx.currentTime + 0.05;
     for (const z of kennung.split("")) {
@@ -225,7 +225,7 @@ function audioStarten() {
       t += punkt * 2;
     }
   };
-  senden(); setInterval(senden, 10000);
+  senden(); setInterval(senden, 15000);
 }
 
 // ---------- Anzeige ----------
