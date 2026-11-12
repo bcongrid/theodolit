@@ -69,7 +69,7 @@ button.gelb{background:linear-gradient(180deg,#d9a72e,#9c7414);color:#1d1606}
     Richtung <input type="range" id="simRichtung" min="0" max="400" step="1" value="0"> <span id="simWert">0</span> gon<br>
     Standort <input type="text" id="simLat" value="48.33421"> <input type="text" id="simLon" value="10.89542"> <button id="simSetzen">setzen</button>
   </div>
-  <div id="hinweis">Gerät flach halten, Antenne nach vorn, und langsam im Kreis drehen. Wo es am lautesten ist, liegt die Bake. Kopfhörer empfohlen.</div>
+  <div id="hinweis">Die Bake sendet alle 20 Sekunden kurz. Gerät flach halten, Antenne nach vorn, und während der Sendung langsam drehen. Wo es am lautesten ist, liegt die Bake. Kopfhörer empfohlen.</div>
 </div>
 
 <div id="start">
@@ -196,12 +196,17 @@ function signalDb() {
 }
 
 // ---------- Ton: Morsekennung + Rauschen ----------
-let ctx = null, ton = null, tonGain = null, rauschGain = null;
+let ctx = null, ton = null, tonGain = null, rauschGain = null, tasten = null;
+// Sendeplan: Die Bake sendet nur während der Kennung; dazwischen kein Träger.
+const PUNKT = 0.08, SENDE_ABSTAND = 20000;     // 15 WpM, alle 20 s
+let sendeStart = 0, sendeEnde = 0;             // Date.now()-Zeiten der laufenden/letzten Sendung
+let letzte = null;                             // Ausschlag am Ende der letzten Sendung: { stufen, peil, nahfeld }
+let warSendung = false;
 const MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..", M: "--", N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--..", 0: "-----", 1: ".----", 2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...", 8: "---..", 9: "----." };
 function audioStarten() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   ton = ctx.createOscillator(); ton.frequency.value = 720; ton.type = "sine";
-  const tasten = ctx.createGain(); tasten.gain.value = 0;
+  tasten = ctx.createGain(); tasten.gain.value = 0;
   tonGain = ctx.createGain(); tonGain.gain.value = 0;
   ton.connect(tasten).connect(tonGain).connect(ctx.destination); ton.start();
   const n = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), dd = n.getChannelData(0);
@@ -210,23 +215,25 @@ function audioStarten() {
   const filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 1400; filter.Q.value = 0.6;
   rauschGain = ctx.createGain(); rauschGain.gain.value = 0;
   rq.connect(filter).connect(rauschGain).connect(ctx.destination); rq.start();
-  // Kennung alle 20 s, 15 WpM
-  const punkt = 0.08;
-  const senden = () => {
-    let t = ctx.currentTime + 0.05;
-    for (const z of kennung.split("")) {
-      if (z === " ") { t += punkt * 7; continue; }
-      for (const s of (MORSE[z] || "")) {
-        const lang = s === "-" ? punkt * 3 : punkt;
-        tasten.gain.setValueAtTime(0, t); tasten.gain.linearRampToValueAtTime(1, t + 0.005);
-        tasten.gain.setValueAtTime(1, t + lang); tasten.gain.linearRampToValueAtTime(0, t + lang + 0.005);
-        t += lang + punkt;
-      }
-      t += punkt * 2;
-    }
-  };
-  senden(); setInterval(senden, 20000);
 }
+function senden() {
+  let t = 0;                                   // Sekunden ab Sendebeginn
+  const t0 = ctx ? ctx.currentTime + 0.05 : 0;
+  for (const z of kennung.split("")) {
+    for (const s of (MORSE[z] || "")) {
+      const lang = s === "-" ? PUNKT * 3 : PUNKT;
+      if (ctx) {
+        tasten.gain.setValueAtTime(0, t0 + t); tasten.gain.linearRampToValueAtTime(1, t0 + t + 0.005);
+        tasten.gain.setValueAtTime(1, t0 + t + lang); tasten.gain.linearRampToValueAtTime(0, t0 + t + lang + 0.005);
+      }
+      t += lang + PUNKT;
+    }
+    t += PUNKT * 2;
+  }
+  sendeStart = Date.now() + 50;
+  sendeEnde = sendeStart + Math.round((t - PUNKT * 3) * 1000);
+}
+function sendetGerade() { const j = Date.now(); return j >= sendeStart && j <= sendeEnde; }
 
 // ---------- Anzeige ----------
 const N_BALKEN = 15;
@@ -235,11 +242,18 @@ function zeigen() {
   const peil = richtungGrad === null ? null : richtungGrad * GON;
   $("peil").textContent = peil === null ? "--- gon" : String(Math.round(peil) % 400).padStart(3, "0") + " gon";
   const s = signalDb();
+  const sendung = sendetGerade();
   let stufen = 0, txt;
   if (!schluessel() || (!bake && !testSchluessel)) { txt = "KEIN TRÄGER. Nur Rauschen auf 1740 kHz."; }
   else if (testSchluessel && !bake) { txt = "TEST: Taste BAKE VERSTECKEN, dann suchen."; }
   else if (!ort) { txt = "WARTE AUF STANDORT …"; }
   else if (s.db <= -90) { txt = "KEIN TRÄGER. Zu weit weg."; }
+  else if (!sendung) {
+    // Kein Träger: Der Ausschlag der letzten Sendung bleibt stehen, bis die Bake wieder sendet.
+    stufen = letzte ? letzte.stufen : 0;
+    txt = letzte ? "LETZTE SENDUNG: " + letzte.stufen + " Str. bei " + letzte.peil + " gon. Warte auf Träger …"
+                 : "WARTE AUF TRÄGER … Gerät ruhig halten.";
+  }
   else {
     stufen = Math.max(0, Math.min(N_BALKEN, Math.round(s.db / 4)));   // 4 dB je Strich
     if (s.d < NAH) txt = stufen >= N_BALKEN ? "NAHFELD. Abschwächer hoch, dann umsehen." : "NAHFELD. Die Bake ist hier. Umsehen.";
@@ -248,10 +262,14 @@ function zeigen() {
     else txt = "TRÄGER " + kennung + ". Auf das Maximum drehen.";
   }
   if (genauigkeit && genauigkeit > 25 && ort) txt += " (GPS ±" + Math.round(genauigkeit) + " m)";
+  if (sendung) letzte = { stufen, peil: peil === null ? "---" : String(Math.round(peil) % 400).padStart(3, "0") };
+  if (warSendung && !sendung && navigator.vibrate) navigator.vibrate(15);
+  warSendung = sendung;
+  $("modus").textContent = sendung ? "● TRÄGER" : "EMPFANG";
   [...$("balken").children].forEach((b, i) => b.classList.toggle("an", i < stufen));
   $("text").textContent = txt;
   if (ctx) {
-    const st = tonAn ? stufen / N_BALKEN : 0;
+    const st = tonAn && sendung ? stufen / N_BALKEN : 0;
     tonGain.gain.setTargetAtTime(st * 0.5, ctx.currentTime, 0.08);
     rauschGain.gain.setTargetAtTime(tonAn ? 0.05 + 0.18 * (1 - st) : 0, ctx.currentTime, 0.1);
   }
@@ -261,9 +279,9 @@ function zeigen() {
 $("abschwaecher").onclick = () => { abschw = (abschw + 1) % ABSCHW_STUFEN.length; $("dbWert").textContent = "−" + ABSCHW_STUFEN[abschw] + " dB"; if (!abschw) $("dbWert").textContent = "0 dB"; };
 $("ton").onclick = () => { tonAn = !tonAn; $("ton").innerHTML = "TON<br>" + (tonAn ? "AN" : "AUS"); };
 $("notieren").onclick = () => {
-  if (richtungGrad === null || !ort) return;
+  if (!letzte || !ort) return;
   const z = new Date();
-  notizen.unshift(`${z.toTimeString().slice(0, 5)}  ${String(Math.round(richtungGrad * GON) % 400).padStart(3, "0")} gon  ${$("balken").querySelectorAll(".an").length} Str.  ${ort.lat.toFixed(5)} ${ort.lon.toFixed(5)}`);
+  notizen.unshift(`${z.toTimeString().slice(0, 5)}  ${letzte.peil} gon  ${letzte.stufen} Str.  ${ort.lat.toFixed(5)} ${ort.lon.toFixed(5)}`);
   notizen = notizen.slice(0, 12);
   try { localStorage.setItem("pieperNotizen", JSON.stringify(notizen)); } catch (e) {}
   if (navigator.vibrate) navigator.vibrate(40);
@@ -283,7 +301,7 @@ $("testBake").onclick = () => {
   $("text").textContent = "TEST: Bake versteckt, 60–120 m entfernt. Suchen!";
 };
 $("hilfe").onclick = () => {
-  alert("Peilempfang\n\n• Flach halten, Antenne nach vorn, langsam im Kreis drehen.\n• Wo die Striche am höchsten sind, liegt die Bake.\n• Hinten gibt es ein kleines zweites Maximum. Nicht täuschen lassen.\n• Zu laut? Abschwächer hochdrehen.\n• Peilung notieren, ein Stück seitlich gehen, noch einmal peilen. Wo sich die Linien kreuzen …\n• Unter 8 m hilft nur noch Umsehen.");
+  alert("Peilempfang\n\n• Die Bake sendet nur alle 20 Sekunden kurz ihre Kennung. Dazwischen bleibt der letzte Ausschlag stehen.\n• Flach halten, Antenne nach vorn, während der Sendung langsam drehen.\n• Wo die Striche am höchsten sind, liegt die Bake.\n• Hinten gibt es ein kleines zweites Maximum. Nicht täuschen lassen.\n• Zu laut? Abschwächer hochdrehen.\n• Peilung notieren, ein Stück seitlich gehen, noch einmal peilen. Wo sich die Linien kreuzen …\n• Unter 8 m hilft nur noch Umsehen.");
 };
 
 try { notizen = JSON.parse(localStorage.getItem("pieperNotizen") || "[]"); } catch (e) {}
@@ -292,8 +310,9 @@ $("los").onclick = async () => {
   try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
   $("start").style.display = "none";
   $("lcd").classList.remove("dunkel");
-  try { audioStarten(); } catch (e) {}
+  try { audioStarten(); } catch (e) { ctx = null; }
   standortStarten();
+  setTimeout(() => { senden(); setInterval(senden, SENDE_ABSTAND); }, 1500);
   setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
   setInterval(zeigen, 250);
 };
