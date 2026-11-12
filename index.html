@@ -487,7 +487,7 @@ const FELD_GRAD = 44;        // Sehfeld über den Glasdurchmesser (54 Einheiten)
 const STAB_HOEHE = 2;        // m, echter Fluchtstab
 const AUGHOEHE = 1.5;        // m
 const STAB_MIN = 1.4;        // Einheiten: kleiner wird er nicht gezeichnet (dann hilft nur Zoomen)
-const ERREICHT = 15;         // m
+const ERREICHT = 7;          // m (Stäbe stehen seit 12.11. auf den Laternen, Abstand 14–60 m)
 function zugSpeicher(i) {
   const k = "theoZug" + zugNummer();
   try { if (i === undefined) return +(localStorage.getItem(k) || 0); localStorage.setItem(k, String(i)); } catch (e) {}
