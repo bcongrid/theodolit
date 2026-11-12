@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>HORCH 80</title>
+<title>HORCH 84</title>
 <style>
 :root{--blech:#7d837c;--blech2:#565b55;--skala:#efe9d6;--tinte:#1b1a17;--rot:#b3261e}
 *{box-sizing:border-box}
@@ -62,7 +62,7 @@ button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
   <div id="stab" class="aus"></div>
   <i class="schraube" style="top:6px;left:6px"></i><i class="schraube" style="top:6px;right:6px"></i>
   <i class="schraube" style="bottom:6px;left:6px"></i><i class="schraube" style="bottom:6px;right:6px"></i>
-  <div id="schild"><span>HORCH 80</span><small>PEILEMPFÄNGER</small></div>
+  <div id="schild"><span>HORCH 84</span><small>PEILEMPFÄNGER</small></div>
   <div id="instrument">
     <svg viewBox="0 0 200 104" aria-label="Feldstärkeanzeige">
       <path d="M25.52 53 A86 86 0 0 1 174.48 53" fill="none" stroke="#1b1a17" stroke-width="1.8"/>
@@ -90,7 +90,7 @@ button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
     <button id="hilfe">ANLEITUNG</button>
     <button id="testBake" class="gelb" style="display:none;grid-column:1/-1">TEST: FUCHS VERSTECKEN</button>
   </div>
-  <div id="typ"><span>VEB Peilgerätewerk Lux · DDR<br>Typ PE 80 · 3,5–3,8 MHz · 4 × 1,5 V</span><span>Nr. 1740<br>1979</span></div>
+  <div id="typ"><span>VEB Peilgerätewerk Lux · DDR<br>Typ PE 84 · 3,5–3,8 MHz · 4 × 1,5 V</span><span>Nr. 1740<br>1984</span></div>
   <div id="protokoll"></div>
   <div id="sim">
     Prüfmodus (kein Kompass gefunden)<br>
@@ -101,7 +101,7 @@ button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
 </div>
 
 <div id="start">
-  <p><b>HORCH 80 · Peilempfänger</b></p>
+  <p><b>HORCH 84 · Peilempfänger</b></p>
   <p>Das Gerät braucht Standort und Kompass. Auf dem iPhone fragt es einmal nach der Erlaubnis.</p>
   <button id="los" class="gelb">Einschalten</button>
 </div>
@@ -236,6 +236,17 @@ function signalDb() {
 // ---------- Ton: Morsekennung + Rauschen; Sendeplan ----------
 let ctx = null, ton = null, tonGain = null, rauschGain = null, tasten = null;
 const PUNKT = 0.08, SENDE_ABSTAND = 20000;     // 15 WpM, alle 20 s
+const ERSTE_MIN = 15000, ERSTE_MAX = 19500;    // nach dem Einschalten/Umstellen: so lange warten bis zur nächsten Sendung
+let sendeTimer = null;
+function sendungPlanen(verzug) {
+  clearTimeout(sendeTimer);
+  sendeTimer = setTimeout(() => { senden(); sendungPlanen(SENDE_ABSTAND); }, verzug);
+}
+function sendungAbbrechen() {
+  sendeEnde = 0;
+  if (ctx && tasten) { tasten.gain.cancelScheduledValues(ctx.currentTime); tasten.gain.setValueAtTime(0, ctx.currentTime); }
+}
+function neuWarten() { sendungAbbrechen(); sendungPlanen(ERSTE_MIN + Math.random() * (ERSTE_MAX - ERSTE_MIN)); }
 let sendeStart = 0, sendeEnde = 0;             // Date.now()-Zeiten der laufenden/letzten Sendung
 let letzte = null;                             // Ausschlag am Ende der letzten Sendung: { wert, peil }
 let warSendung = false;
@@ -346,7 +357,7 @@ const PX_JE_KHZ = 6;
     if (f % 20 === 0) { const b = document.createElement("b"); b.style.left = x + "px"; b.textContent = (f / 1000).toFixed(2).replace(".", ","); band.appendChild(b); }
   }
 })();
-let abstimmTimer = null;
+let abstimmTimer = null, gestartet = false;
 function freqSetzen(f, sofort) {
   freq = Math.max(F_MIN, Math.min(F_MAX, Math.round(f)));
   $("freqWert").textContent = freq + " kHz";
@@ -354,6 +365,7 @@ function freqSetzen(f, sofort) {
   $("trommelBand").style.transform = `translateX(${-(freq - F_MIN) * PX_JE_KHZ}px)`;
   try { localStorage.setItem("horchFreq", freq); } catch (e) {}
   bake = null; testSchluessel = false; letzte = null;
+  if (gestartet) neuWarten();          // nie direkt in eine Sendung hineindrehen
   clearTimeout(abstimmTimer);
   abstimmTimer = setTimeout(bakeLaden, sofort ? 0 : 700);   // erst prüfen, wenn der Knopf ruht
 }
@@ -403,7 +415,7 @@ $("testBake").onclick = () => {
   $("text").textContent = "TEST: Fuchs versteckt, 60–120 m entfernt. Suchen!";
 };
 $("hilfe").onclick = () => {
-  alert("HORCH 80 – Kurzanleitung\n\n" +
+  alert("HORCH 84 – Kurzanleitung\n\n" +
     "0. Frequenz einstellen. Nur auf der richtigen Frequenz ist der Fuchs zu hören.\n" +
     "1. Der Fuchs sendet alle 20 s kurz seine Kennung. Nur dann schlägt der Zeiger aus; der rote Schleppzeiger zeigt danach den letzten Wert.\n" +
     "2. Antenne FERRIT: Gerät flach, Oberkante nach vorn, langsam drehen. Wo es verstummt, zeigt die Oberkante auf den Fuchs – oder genau von ihm weg.\n" +
@@ -421,7 +433,7 @@ $("los").onclick = async () => {
   try { audioStarten(); } catch (e) { ctx = null; }
   standortStarten();
   setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
-  setTimeout(() => { senden(); setInterval(senden, SENDE_ABSTAND); }, 1500);
+  gestartet = true; neuWarten();
   setInterval(zeigen, 120);
 };
 if (!window.isSecureContext) $("text").textContent = "Diese Seite braucht https.";
