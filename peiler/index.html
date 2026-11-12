@@ -3,78 +3,92 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Pieper</title>
+<title>HORCH 80</title>
 <style>
-:root{--gehaeuse:#5d6166;--gehaeuse2:#3c3f43;--lcd:#9fb88a;--lcd2:#7f9a6c;--pixel:#1d2a16;--aus:rgba(29,42,22,.13)}
+:root{--blech:#7d837c;--blech2:#565b55;--skala:#efe9d6;--tinte:#1b1a17;--rot:#b3261e}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#1b1c1e;color:#ddd;font-family:system-ui,sans-serif;overscroll-behavior:none}
-body{display:flex;justify-content:center;align-items:flex-start;padding:72px 16px 30px}
-#geraet{width:100%;max-width:380px;background:linear-gradient(160deg,var(--gehaeuse),var(--gehaeuse2));border-radius:26px 26px 34px 34px;
-  padding:18px 18px 22px;box-shadow:0 10px 30px rgba(0,0,0,.7),inset 0 2px 0 rgba(255,255,255,.15),inset 0 -3px 0 rgba(0,0,0,.4);position:relative}
-#antenne{position:absolute;top:-58px;right:44px;width:9px;height:66px;border-radius:5px 5px 2px 2px;background:linear-gradient(90deg,#222,#777 40%,#333);
-  box-shadow:0 0 0 1px #111}
-#antenne::before{content:"";position:absolute;top:-9px;left:-3px;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#888,#111)}
-#marke{display:flex;justify-content:space-between;font:bold 11px/1 "Courier New",monospace;color:#c9ccd0;letter-spacing:.12em;margin-bottom:10px}
-#marke span:last-child{color:#e2b33c}
-#lcd{background:linear-gradient(180deg,var(--lcd),var(--lcd2));border-radius:6px;padding:10px 12px 12px;box-shadow:inset 0 3px 8px rgba(0,0,0,.45),0 0 0 3px #222;
-  font-family:"Courier New",monospace;color:var(--pixel);min-height:186px;position:relative;overflow:hidden}
-#lcd.dunkel{color:var(--aus)}
-.zeile{display:flex;justify-content:space-between;font-size:13px;font-weight:bold}
-#freq{font-size:34px;font-weight:bold;letter-spacing:.04em;margin:6px 0 2px}
-#freq small{font-size:15px}
-#balken{display:flex;gap:3px;height:34px;align-items:flex-end;margin:6px 0 4px}
-#balken i{flex:1;background:var(--aus);border-radius:1px}
-#balken i.an{background:var(--pixel)}
-#balken i.rand{background:transparent;box-shadow:inset 0 0 0 2px var(--pixel)}
-#skala{display:flex;justify-content:space-between;font-size:10px;font-weight:bold}
-#text{font-size:13px;font-weight:bold;margin-top:8px;min-height:2.6em;line-height:1.3}
-#tasten{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-button{font:bold 12px/1.15 system-ui,sans-serif;color:#e8e8e8;background:linear-gradient(180deg,#4a4d52,#2c2e31);border:0;border-radius:10px;padding:11px 4px;
-  box-shadow:0 3px 0 #151617,inset 0 1px 0 rgba(255,255,255,.18);cursor:pointer;touch-action:manipulation}
-button:active{transform:translateY(2px);box-shadow:0 1px 0 #151617}
-button.gelb{background:linear-gradient(180deg,#d9a72e,#9c7414);color:#1d1606}
-#abschwaecher b{display:block;font-size:15px}
-#hinweis{font-size:12px;color:#9a9da2;margin-top:14px;line-height:1.45}
-#start{position:fixed;inset:0;background:rgba(10,10,12,.94);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;text-align:center;z-index:9}
-#start p{max-width:340px;line-height:1.5;color:#cfd2d6}
+html,body{margin:0;min-height:100%;background:#1a1b1a;color:#ddd;font-family:system-ui,sans-serif;overscroll-behavior:none}
+body{display:flex;justify-content:center;align-items:flex-start;padding:96px 16px 30px}
+#geraet{width:100%;max-width:380px;background:
+  repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 2px,rgba(0,0,0,.025) 2px 4px),linear-gradient(170deg,var(--blech),var(--blech2));
+  border-radius:10px;padding:16px 16px 20px;position:relative;
+  box-shadow:0 10px 30px rgba(0,0,0,.7),inset 0 2px 0 rgba(255,255,255,.2),inset 0 -3px 0 rgba(0,0,0,.45),0 0 0 2px #2b2e2a}
+.schraube{position:absolute;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#d7dbd5,#4a4e49 70%);box-shadow:0 0 0 1px #2b2e2a}
+.schraube::after{content:"";position:absolute;left:2px;right:2px;top:4.5px;height:2px;background:#2b2e2a;transform:rotate(30deg)}
+#stab{position:absolute;bottom:100%;right:38px;width:5px;height:0;background:linear-gradient(90deg,#666,#eee 40%,#888);border-radius:2px 2px 0 0;
+  transition:height .5s;box-shadow:0 0 0 1px #333}
+#stab.aus{height:14px}
+#stab.an{height:84px}
+#stab::before{content:"";position:absolute;top:-6px;left:-2.5px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#eee,#555)}
+#schild{display:flex;justify-content:space-between;align-items:baseline;margin:2px 4px 12px;font:bold 15px/1 Georgia,serif;color:#f3efe2;letter-spacing:.14em;
+  text-shadow:0 1px 0 rgba(0,0,0,.6)}
+#schild small{font:11px/1 "Courier New",monospace;letter-spacing:.06em;color:#d8d4c6}
+#instrument{background:linear-gradient(180deg,#fbf7e8,var(--skala));border-radius:6px;box-shadow:inset 0 3px 10px rgba(0,0,0,.4),0 0 0 3px #232521;
+  padding:8px 10px 6px;position:relative}
+#instrument svg{display:block;width:100%;height:auto}
+#zeile{display:flex;justify-content:space-between;font:bold 12px "Courier New",monospace;color:var(--tinte);margin-top:2px}
+#lampe{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4a1612;margin-right:5px;vertical-align:-1px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+#lampe.an{background:#ff4b30;box-shadow:0 0 8px #ff4b30}
+#text{font:bold 13px/1.35 "Courier New",monospace;color:#f3efe2;margin:10px 4px 0;min-height:2.7em}
+#bedienung{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+button{font:bold 12px/1.15 system-ui,sans-serif;color:#f1f1ee;background:linear-gradient(180deg,#3b3e3a,#1f211e);border:0;border-radius:8px;padding:11px 4px;
+  box-shadow:0 3px 0 #0f100f,inset 0 1px 0 rgba(255,255,255,.15);cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #0f100f}
+button b{display:block;font-size:15px;margin-top:2px}
+button.kipp b{color:#ffd36b}
+button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
+#typ{font:10px/1.4 "Courier New",monospace;color:#d9d6cb;margin:14px 4px 0;border-top:1px solid rgba(0,0,0,.35);padding-top:8px;display:flex;justify-content:space-between}
+#hinweis{font-size:12px;color:#a7aaa5;margin-top:14px;line-height:1.45}
+#start{position:fixed;inset:0;background:rgba(10,11,10,.95);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;text-align:center;z-index:9}
+#start p{max-width:340px;line-height:1.5;color:#cfd2cc}
 #start button{font-size:16px;padding:14px 28px;margin-top:10px}
-#protokoll{display:none;margin-top:14px;background:#111;border-radius:8px;padding:10px;font:12px/1.5 "Courier New",monospace;color:#b7c9a4}
-#sim{display:none;margin-top:14px;border:1px dashed #777;border-radius:8px;padding:8px;font:12px "Courier New",monospace;color:#bbb}
+#protokoll{display:none;margin-top:14px;background:#111;border-radius:8px;padding:10px;font:12px/1.5 "Courier New",monospace;color:#e6dfc4}
+#sim{display:none;margin-top:14px;border:1px dashed #888;border-radius:8px;padding:8px;font:12px "Courier New",monospace;color:#bbb}
 #sim input[type=range]{width:100%}
 #sim input[type=text]{width:8.5em;font:inherit}
 </style>
 </head>
 <body>
 <div id="geraet">
-  <div id="antenne"></div>
-  <div id="marke"><span>STRASSER · PIEPER 17</span><span>GWFM</span></div>
-  <div id="lcd" class="dunkel">
-    <div class="zeile"><span id="modus">EMPFANG</span><span id="batt">▮▮▮▯</span></div>
-    <div id="freq">1740<small> kHz</small></div>
-    <div class="zeile"><span>PEILUNG</span><span id="peil">--- gon</span></div>
-    <div id="balken"></div>
-    <div id="skala"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+20</span></div>
-    <div id="text">Bitte warten …</div>
+  <div id="stab" class="aus"></div>
+  <i class="schraube" style="top:6px;left:6px"></i><i class="schraube" style="top:6px;right:6px"></i>
+  <i class="schraube" style="bottom:6px;left:6px"></i><i class="schraube" style="bottom:6px;right:6px"></i>
+  <div id="schild"><span>HORCH 80</span><small>PEILEMPFÄNGER</small></div>
+  <div id="instrument">
+    <svg viewBox="0 0 200 104" aria-label="Feldstärkeanzeige">
+      <path d="M22 92 A86 86 0 0 1 178 92" fill="none" stroke="#1b1a17" stroke-width="1"/>
+      <path d="M150 50.5 A86 86 0 0 1 178 92" fill="none" stroke="#b3261e" stroke-width="3"/>
+      <g id="striche"></g>
+      <text x="100" y="62" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#1b1a17">FELDSTÄRKE</text>
+      <text x="100" y="74" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#1b1a17">3740 kHz</text>
+      <line id="schlepp" x1="100" y1="96" x2="100" y2="14" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="3 2" opacity="0"/>
+      <line id="zeiger" x1="100" y1="96" x2="100" y2="12" stroke="#1b1a17" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="100" cy="96" r="6" fill="#2b2e2a"/>
+    </svg>
+    <div id="zeile"><span><i id="lampe"></i><span id="modus">BEREIT</span></span><span id="peil">Kompass --- gon</span></div>
   </div>
-  <div id="tasten">
-    <button id="abschwaecher">ABSCHW.<b id="dbWert">0 dB</b></button>
+  <div id="text">Bitte warten …</div>
+  <div id="bedienung">
+    <button id="antenne" class="kipp">ANTENNE<b id="antWert">FERRIT</b></button>
+    <button id="hf">HF-REGLER<b id="hfWert">5</b></button>
+    <button id="tonhoehe">TON<b id="tonWert">900 Hz</b></button>
     <button id="notieren">PEILUNG<br>NOTIEREN</button>
-    <button id="ton">TON<br>AN</button>
     <button id="zeige">NOTIZEN</button>
-    <button id="testBake" class="gelb" style="display:none">BAKE<br>VERSTECKEN</button>
-    <button id="hilfe">?</button>
+    <button id="hilfe">ANLEITUNG</button>
+    <button id="testBake" class="gelb" style="display:none;grid-column:1/-1">TEST: FUCHS VERSTECKEN</button>
   </div>
+  <div id="typ"><span>VEB Peilgerätewerk Lux · DDR<br>Typ PE 80 · 3,5–3,8 MHz · 4 × 1,5 V</span><span>Nr. 1740<br>1979</span></div>
   <div id="protokoll"></div>
   <div id="sim">
     Prüfmodus (kein Kompass gefunden)<br>
     Richtung <input type="range" id="simRichtung" min="0" max="400" step="1" value="0"> <span id="simWert">0</span> gon<br>
     Standort <input type="text" id="simLat" value="48.33421"> <input type="text" id="simLon" value="10.89542"> <button id="simSetzen">setzen</button>
   </div>
-  <div id="hinweis">Die Bake sendet alle 20 Sekunden kurz. Gerät flach halten, Antenne nach vorn, und während der Sendung langsam drehen. Wo es am lautesten ist, liegt die Bake. Kopfhörer empfohlen.</div>
+  <div id="hinweis">Der Fuchs sendet alle 20 Sekunden kurz. Gerät flach halten, Oberkante nach vorn. Mit dem Ferritstab die Richtung suchen, in der es <b>verstummt</b>. Dann die Stabantenne zuschalten: Jetzt ist vorn laut, hinten leise. Kopfhörer empfohlen.</div>
 </div>
 
 <div id="start">
-  <p><b>Pieper 17 · Peilempfang</b></p>
+  <p><b>HORCH 80 · Peilempfänger</b></p>
   <p>Das Gerät braucht Standort und Kompass. Auf dem iPhone fragt es einmal nach der Erlaubnis.</p>
   <button id="los" class="gelb">Einschalten</button>
 </div>
@@ -86,14 +100,16 @@ const $ = (id) => document.getElementById(id);
 const GON = 400 / 360;
 const MISSWEISUNG_GRAD = 4.5;   // Augsburg, magnetisch + 4,5° = rechtweisend (Schätzwert, wie im Theo)
 const GLAETTUNG = 0.2;
-const ABSCHW_STUFEN = [0, 10, 20, 30, 40];
+const HF_STUFEN = [0, 10, 20, 30, 40];      // Abschwächung in dB; Anzeige 5 … 1
+const TOENE = [600, 900, 1200];
 const NAH = 8;                  // m: darunter Nahfeld, das GPS kann nicht feiner
-const REICHWEITE = 1200;         // m: darüber nur Rauschen
+const REICHWEITE = 1200;        // m: darüber nur Rauschen
+const SKALA_DB = 60;            // Vollausschlag
 
 let bake = null, testSchluessel = false, kennung = "N0STR";
 let ort = null, genauigkeit = null, glAbstand = null;
 let richtungGrad = null, glX = null, glY = null;
-let abschw = 0, tonAn = true, notizen = [];
+let hf = 0, mitStab = false, tonIndex = 1, notizen = [];
 
 // ---------- Schlüssel ----------
 function schluessel() { return decodeURIComponent(location.hash.slice(1) || "").split("/")[0].toUpperCase().replace(/[^A-Z0-9]/g, ""); }
@@ -111,7 +127,7 @@ async function bakeLaden() {
       kennung = klar.bake.kennung || kennung;
       testSchluessel = !!klar.test;
       if (testSchluessel) {
-        try { const t = JSON.parse(localStorage.getItem("pieperTestBake") || "null"); if (t) bake = t; } catch (e) {}
+        try { const t = JSON.parse(localStorage.getItem("horchTestBake") || "null"); if (t) bake = t; } catch (e) {}
       } else bake = { lat: klar.bake.lat, lon: klar.bake.lon };
       $("testBake").style.display = testSchluessel ? "" : "none";
       return;
@@ -177,11 +193,12 @@ function simAn() {
 }
 
 // ---------- Signalmodell ----------
-// Feldstärke fällt mit 20·log10(Abstand); Richtantenne mit Vorder- und kleiner Rückkeule.
+// Ferritstab (quer im Gerät): Achter, verstummt, wenn die Oberkante auf den Fuchs (oder genau weg) zeigt.
+// Ferrit + Stab: Herzkurve, vorn laut, hinten leise – so klärt man die Seite.
 function antennenGewinn(diffGrad) {
-  const c = Math.cos(diffGrad * Math.PI / 180);
-  const vorn = Math.pow((1 + c) / 2, 6);
-  return 0.03 + 0.97 * vorn + 0.05 * Math.pow(Math.max(0, -c), 6);
+  const r = diffGrad * Math.PI / 180;
+  if (!mitStab) return 0.012 + 0.988 * Math.abs(Math.sin(r));
+  return 0.03 + 0.97 * Math.pow((1 + Math.cos(r)) / 2, 1.5);
 }
 function signalDb() {
   if (!bake || !ort) return null;
@@ -189,36 +206,34 @@ function signalDb() {
   glAbstand = glAbstand === null ? d : glAbstand + (d - glAbstand) * 0.25;
   if (glAbstand > REICHWEITE) return { db: -99, d: glAbstand };
   const feld = 70 - 20 * Math.log10(Math.max(glAbstand, 3) / 10);           // dB über Rauschen
-  const diff = richtungGrad === null ? 180 : Math.abs(((peilungGrad(ort, bake) - richtungGrad) % 360 + 540) % 360 - 180);
-  const nahfeld = glAbstand < NAH ? 1 : 0;                                   // im Nahfeld hilft die Richtung nicht mehr
-  const gewinn = nahfeld ? 1 : antennenGewinn(diff);
-  const flattern = (Math.random() - 0.5) * 2.5;
-  return { db: feld + 20 * Math.log10(gewinn) - ABSCHW_STUFEN[abschw] + flattern, d: glAbstand };
+  const diff = richtungGrad === null ? 90 : ((peilungGrad(ort, bake) - richtungGrad) % 360 + 540) % 360 - 180;
+  const gewinn = glAbstand < NAH ? 1 : antennenGewinn(diff);               // Nahfeld: keine Richtwirkung mehr
+  const flattern = (Math.random() - 0.5) * 2;
+  return { db: feld + 20 * Math.log10(gewinn) - HF_STUFEN[hf] + flattern, d: glAbstand };
 }
 
-// ---------- Ton: Morsekennung + Rauschen ----------
+// ---------- Ton: Morsekennung + Rauschen; Sendeplan ----------
 let ctx = null, ton = null, tonGain = null, rauschGain = null, tasten = null;
-// Sendeplan: Die Bake sendet nur während der Kennung; dazwischen kein Träger.
 const PUNKT = 0.08, SENDE_ABSTAND = 20000;     // 15 WpM, alle 20 s
 let sendeStart = 0, sendeEnde = 0;             // Date.now()-Zeiten der laufenden/letzten Sendung
-let letzte = null;                             // Ausschlag am Ende der letzten Sendung: { stufen, peil, nahfeld }
+let letzte = null;                             // Ausschlag am Ende der letzten Sendung: { wert, peil }
 let warSendung = false;
 const MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..", M: "--", N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--..", 0: "-----", 1: ".----", 2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...", 8: "---..", 9: "----." };
 function audioStarten() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
-  ton = ctx.createOscillator(); ton.frequency.value = 720; ton.type = "sine";
+  ton = ctx.createOscillator(); ton.frequency.value = TOENE[tonIndex]; ton.type = "sine";
   tasten = ctx.createGain(); tasten.gain.value = 0;
   tonGain = ctx.createGain(); tonGain.gain.value = 0;
   ton.connect(tasten).connect(tonGain).connect(ctx.destination); ton.start();
   const n = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), dd = n.getChannelData(0);
   for (let i = 0; i < dd.length; i++) dd[i] = Math.random() * 2 - 1;
   const rq = ctx.createBufferSource(); rq.buffer = n; rq.loop = true;
-  const filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 1400; filter.Q.value = 0.6;
+  const filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 1100; filter.Q.value = 0.7;
   rauschGain = ctx.createGain(); rauschGain.gain.value = 0;
   rq.connect(filter).connect(rauschGain).connect(ctx.destination); rq.start();
 }
 function senden() {
-  let t = 0;                                   // Sekunden ab Sendebeginn
+  let t = 0;
   const t0 = ctx ? ctx.currentTime + 0.05 : 0;
   for (const z of kennung.split("")) {
     for (const s of (MORSE[z] || "")) {
@@ -236,61 +251,86 @@ function senden() {
 }
 function sendetGerade() { const j = Date.now(); return j >= sendeStart && j <= sendeEnde; }
 
-// ---------- Anzeige ----------
-const N_BALKEN = 15;
-for (let i = 0; i < N_BALKEN; i++) { const b = document.createElement("i"); b.style.height = (30 + i * 5) + "%"; $("balken").appendChild(b); }
+// ---------- Instrument ----------
+(function skala() {
+  const g = $("striche");
+  for (let i = 0; i <= 10; i++) {
+    const w = (-60 + i * 12) * Math.PI / 180, lang = i % 2 === 0 ? 9 : 5;
+    const x1 = 100 + 86 * Math.sin(w), y1 = 96 - 86 * Math.cos(w), x2 = 100 + (86 - lang) * Math.sin(w), y2 = 96 - (86 - lang) * Math.cos(w);
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+    l.setAttribute("stroke", i >= 8 ? "#b3261e" : "#1b1a17"); l.setAttribute("stroke-width", i % 2 === 0 ? 1.4 : 0.9);
+    g.appendChild(l);
+    if (i % 2 === 0) {
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", 100 + 70 * Math.sin(w)); t.setAttribute("y", 99 - 70 * Math.cos(w));
+      t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "8"); t.setAttribute("font-family", "Georgia,serif");
+      t.setAttribute("fill", i >= 8 ? "#b3261e" : "#1b1a17"); t.textContent = i;
+      g.appendChild(t);
+    }
+  }
+})();
+let zeigerWert = 0;   // 0 … 10, träge wie ein Drehspulinstrument
+function zeigerSetzen(id, wert) { $(id).setAttribute("transform", `rotate(${-60 + Math.max(0, Math.min(10, wert)) * 12} 100 96)`); }
+
 function zeigen() {
-  const peil = richtungGrad === null ? null : richtungGrad * GON;
-  $("peil").textContent = peil === null ? "--- gon" : String(Math.round(peil) % 400).padStart(3, "0") + " gon";
+  const peil = richtungGrad === null ? null : String(Math.round(richtungGrad * GON) % 400).padStart(3, "0");
+  $("peil").textContent = "Kompass " + (peil === null ? "---" : peil) + " gon";
   const s = signalDb();
   const sendung = sendetGerade();
-  let stufen = 0, txt;
-  if (!schluessel() || (!bake && !testSchluessel)) { txt = "KEIN TRÄGER. Nur Rauschen auf 1740 kHz."; }
-  else if (testSchluessel && !bake) { txt = "TEST: Taste BAKE VERSTECKEN, dann suchen."; }
-  else if (!ort) { txt = "WARTE AUF STANDORT …"; }
-  else if (s.db <= -90) { txt = "KEIN TRÄGER. Zu weit weg."; }
+  let ziel = 0, txt;
+  if (!schluessel() || (!bake && !testSchluessel)) txt = "Kein Träger auf 3740 kHz. Nur Rauschen.";
+  else if (testSchluessel && !bake) txt = "TEST: Taste FUCHS VERSTECKEN, dann suchen.";
+  else if (!ort) txt = "Warte auf Standort …";
+  else if (s.db <= -90) txt = "Kein Träger. Zu weit weg.";
   else if (!sendung) {
-    // Kein Träger: Der Ausschlag der letzten Sendung bleibt stehen, bis die Bake wieder sendet.
-    stufen = letzte ? letzte.stufen : 0;
-    txt = letzte ? "LETZTE SENDUNG: " + letzte.stufen + " Str. bei " + letzte.peil + " gon. Warte auf Träger …"
-                 : "WARTE AUF TRÄGER … Gerät ruhig halten.";
+    txt = letzte ? `Letzte Sendung: ${letzte.wert.toFixed(1).replace(".", ",")} bei ${letzte.peil} gon (${mitStab ? "Ferrit+Stab" : "Ferrit"}). Warte auf Träger …`
+                 : "Warte auf Träger … Gerät ruhig halten.";
+  } else {
+    ziel = Math.max(0, Math.min(10.4, s.db / (SKALA_DB / 10)));
+    if (s.d < NAH) txt = ziel >= 10 ? "Nahfeld. HF-Regler zurück, dann umsehen." : "Nahfeld. Der Fuchs ist hier. Umsehen.";
+    else if (ziel >= 10) txt = "Vollausschlag. HF-Regler zurückdrehen.";
+    else if (!mitStab) txt = "Träger " + kennung + ". Auf das Minimum drehen.";
+    else txt = "Träger " + kennung + ". Vorn laut, hinten leise.";
   }
-  else {
-    stufen = Math.max(0, Math.min(N_BALKEN, Math.round(s.db / 4)));   // 4 dB je Strich
-    if (s.d < NAH) txt = stufen >= N_BALKEN ? "NAHFELD. Abschwächer hoch, dann umsehen." : "NAHFELD. Die Bake ist hier. Umsehen.";
-    else if (stufen >= N_BALKEN) txt = "ÜBERSTEUERT. Abschwächer hochdrehen.";
-    else if (stufen <= 1) txt = "SCHWACH. Langsam drehen.";
-    else txt = "TRÄGER " + kennung + ". Auf das Maximum drehen.";
-  }
-  if (genauigkeit && genauigkeit > 25 && ort) txt += " (GPS ±" + Math.round(genauigkeit) + " m)";
-  if (sendung) letzte = { stufen, peil: peil === null ? "---" : String(Math.round(peil) % 400).padStart(3, "0") };
+  if (genauigkeit && genauigkeit > 25 && ort) txt += ` (GPS ±${Math.round(genauigkeit)} m)`;
+  zeigerWert += (ziel - zeigerWert) * (ziel > zeigerWert ? 0.5 : 0.3);
+  zeigerSetzen("zeiger", zeigerWert);
+  if (sendung) letzte = { wert: Math.min(10, zeigerWert), peil: peil === null ? "---" : peil };
   if (warSendung && !sendung && navigator.vibrate) navigator.vibrate(15);
   warSendung = sendung;
-  $("modus").textContent = sendung ? "● TRÄGER" : "EMPFANG";
-  // Sendung: volle Balken. Pause: nur der Umriss des letzten Ausschlags.
-  [...$("balken").children].forEach((b, i) => {
-    b.classList.toggle("an", sendung && i < stufen);
-    b.classList.toggle("rand", !sendung && i < stufen);
-  });
+  // Schleppzeiger: zeigt in der Pause, wo der letzte Ausschlag war
+  $("schlepp").setAttribute("opacity", !sendung && letzte ? 1 : 0);
+  if (letzte) zeigerSetzen("schlepp", letzte.wert);
+  $("lampe").classList.toggle("an", sendung);
+  $("modus").textContent = sendung ? "TRÄGER" : "EMPFANG";
   $("text").textContent = txt;
   if (ctx) {
-    const st = tonAn && sendung ? stufen / N_BALKEN : 0;
-    tonGain.gain.setTargetAtTime(st * 0.5, ctx.currentTime, 0.08);
-    rauschGain.gain.setTargetAtTime(tonAn ? 0.05 + 0.18 * (1 - st) : 0, ctx.currentTime, 0.1);
+    const st = sendung ? Math.min(1, ziel / 10) : 0;
+    tonGain.gain.setTargetAtTime(st * 0.5, ctx.currentTime, 0.06);
+    rauschGain.gain.setTargetAtTime(0.05 + 0.16 * (1 - st), ctx.currentTime, 0.1);
   }
 }
 
-// ---------- Tasten ----------
-$("abschwaecher").onclick = () => { abschw = (abschw + 1) % ABSCHW_STUFEN.length; $("dbWert").textContent = "−" + ABSCHW_STUFEN[abschw] + " dB"; if (!abschw) $("dbWert").textContent = "0 dB"; };
-$("ton").onclick = () => { tonAn = !tonAn; $("ton").innerHTML = "TON<br>" + (tonAn ? "AN" : "AUS"); };
+// ---------- Bedienung ----------
+$("antenne").onclick = () => {
+  mitStab = !mitStab;
+  $("antWert").textContent = mitStab ? "FERRIT+STAB" : "FERRIT";
+  $("stab").className = mitStab ? "an" : "aus";
+};
+$("hf").onclick = () => { hf = (hf + 1) % HF_STUFEN.length; $("hfWert").textContent = 5 - hf; };
+$("tonhoehe").onclick = () => {
+  tonIndex = (tonIndex + 1) % TOENE.length; $("tonWert").textContent = TOENE[tonIndex] + " Hz";
+  if (ton) ton.frequency.setValueAtTime(TOENE[tonIndex], ctx.currentTime);
+};
 $("notieren").onclick = () => {
   if (!letzte || !ort) return;
   const z = new Date();
-  notizen.unshift(`${z.toTimeString().slice(0, 5)}  ${letzte.peil} gon  ${letzte.stufen} Str.  ${ort.lat.toFixed(5)} ${ort.lon.toFixed(5)}`);
+  notizen.unshift(`${z.toTimeString().slice(0, 5)}  ${letzte.peil} gon  ${letzte.wert.toFixed(1)}  ${mitStab ? "F+S" : "F  "}  ${ort.lat.toFixed(5)} ${ort.lon.toFixed(5)}`);
   notizen = notizen.slice(0, 12);
-  try { localStorage.setItem("pieperNotizen", JSON.stringify(notizen)); } catch (e) {}
+  try { localStorage.setItem("horchNotizen", JSON.stringify(notizen)); } catch (e) {}
   if (navigator.vibrate) navigator.vibrate(40);
-  if ($("protokoll").style.display === "block") $("zeige").onclick(), $("zeige").onclick();
+  if ($("protokoll").style.display === "block") $("protokoll").innerHTML = notizen.join("<br>");
 };
 $("zeige").onclick = () => {
   const p = $("protokoll");
@@ -302,24 +342,29 @@ $("testBake").onclick = () => {
   if (!ort) return;
   bake = versetzt(ort, 60 + Math.random() * 60, Math.random() * 360);
   glAbstand = null;
-  try { localStorage.setItem("pieperTestBake", JSON.stringify(bake)); } catch (e) {}
-  $("text").textContent = "TEST: Bake versteckt, 60–120 m entfernt. Suchen!";
+  try { localStorage.setItem("horchTestBake", JSON.stringify(bake)); } catch (e) {}
+  $("text").textContent = "TEST: Fuchs versteckt, 60–120 m entfernt. Suchen!";
 };
 $("hilfe").onclick = () => {
-  alert("Peilempfang\n\n• Die Bake sendet nur alle 20 Sekunden kurz ihre Kennung. Dazwischen bleibt der letzte Ausschlag stehen.\n• Flach halten, Antenne nach vorn, während der Sendung langsam drehen.\n• Wo die Striche am höchsten sind, liegt die Bake.\n• Hinten gibt es ein kleines zweites Maximum. Nicht täuschen lassen.\n• Zu laut? Abschwächer hochdrehen.\n• Peilung notieren, ein Stück seitlich gehen, noch einmal peilen. Wo sich die Linien kreuzen …\n• Unter 8 m hilft nur noch Umsehen.");
+  alert("HORCH 80 – Kurzanleitung\n\n" +
+    "1. Der Fuchs sendet alle 20 s kurz seine Kennung. Nur dann schlägt der Zeiger aus; der rote Schleppzeiger zeigt danach den letzten Wert.\n" +
+    "2. Antenne FERRIT: Gerät flach, Oberkante nach vorn, langsam drehen. Wo es verstummt, zeigt die Oberkante auf den Fuchs – oder genau von ihm weg.\n" +
+    "3. Antenne FERRIT+STAB: Jetzt ist es vorn laut und hinten leise. So weiß man, welche Seite stimmt.\n" +
+    "4. Zu laut? HF-Regler zurückdrehen.\n" +
+    "5. Peilung notieren, ein Stück seitlich gehen, noch einmal peilen. Wo sich die Linien kreuzen …\n" +
+    "6. Unter 8 m hilft nur noch Umsehen.");
 };
 
-try { notizen = JSON.parse(localStorage.getItem("pieperNotizen") || "[]"); } catch (e) {}
+try { notizen = JSON.parse(localStorage.getItem("horchNotizen") || "[]"); } catch (e) {}
 
 $("los").onclick = async () => {
   try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
   $("start").style.display = "none";
-  $("lcd").classList.remove("dunkel");
   try { audioStarten(); } catch (e) { ctx = null; }
   standortStarten();
-  setTimeout(() => { senden(); setInterval(senden, SENDE_ABSTAND); }, 1500);
   setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
-  setInterval(zeigen, 250);
+  setTimeout(() => { senden(); setInterval(senden, SENDE_ABSTAND); }, 1500);
+  setInterval(zeigen, 120);
 };
 if (!window.isSecureContext) $("text").textContent = "Diese Seite braucht https.";
 bakeLaden();
