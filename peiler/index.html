@@ -29,6 +29,15 @@ body{display:flex;justify-content:center;align-items:flex-start;padding:96px 16p
 #zeile{display:flex;justify-content:space-between;font:bold 12px "Courier New",monospace;color:var(--tinte);margin-top:2px}
 #lampe{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4a1612;margin-right:5px;vertical-align:-1px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
 #lampe.an{background:#ff4b30;box-shadow:0 0 8px #ff4b30}
+#abstimmung{margin-top:12px;background:#151614;border-radius:6px;padding:8px;box-shadow:inset 0 2px 6px rgba(0,0,0,.7)}
+#trommel{position:relative;height:38px;overflow:hidden;border-radius:4px;background:linear-gradient(180deg,#d9d1b4,#f5efd9 45%,#cfc6a6);touch-action:none;cursor:ew-resize}
+#trommelBand{position:absolute;top:0;bottom:0;left:50%;white-space:nowrap;font:bold 11px/1 "Courier New",monospace;color:#1b1a17}
+#trommelBand i{position:absolute;bottom:0;width:1px;background:#1b1a17}
+#trommelBand b{position:absolute;top:4px;transform:translateX(-50%)}
+#marke{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#e01b10;box-shadow:0 0 4px rgba(224,27,16,.6)}
+#freqZeile{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px}
+#freqZeile button{padding:8px 0;width:3.1em;font-size:13px}
+#freqWert{font:bold 22px "Courier New",monospace;color:#ffd36b;text-align:center;flex:1;letter-spacing:.04em}
 #text{font:bold 13px/1.35 "Courier New",monospace;color:#f3efe2;margin:10px 4px 0;min-height:2.7em}
 #bedienung{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
 button{font:bold 12px/1.15 system-ui,sans-serif;color:#f1f1ee;background:linear-gradient(180deg,#3b3e3a,#1f211e);border:0;border-radius:8px;padding:11px 4px;
@@ -60,12 +69,16 @@ button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
       <path d="M150.55 26.42 A86 86 0 0 1 174.48 53" fill="none" stroke="#b3261e" stroke-width="3"/>
       <g id="striche"></g>
       <text x="100" y="62" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#1b1a17">FELDSTÄRKE</text>
-      <text x="100" y="74" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#1b1a17">3740 kHz</text>
+      <text id="freqSkala" x="100" y="74" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#1b1a17">3500 kHz</text>
       <line id="schlepp" x1="100" y1="4" x2="100" y2="16" stroke="#e01b10" stroke-width="2.8" stroke-linecap="round" opacity="0"/>
       <line id="zeiger" x1="100" y1="96" x2="100" y2="12" stroke="#1b1a17" stroke-width="1.8" stroke-linecap="round"/>
       <circle cx="100" cy="96" r="6" fill="#2b2e2a"/>
     </svg>
     <div id="zeile"><span><i id="lampe"></i><span id="modus">BEREIT</span></span><span id="peil">Kompass --- gon</span></div>
+  </div>
+  <div id="abstimmung">
+    <div id="trommel"><div id="trommelBand"></div><div id="marke"></div></div>
+    <div id="freqZeile"><button id="m10">−10</button><button id="m1">−1</button><span id="freqWert">3500 kHz</span><button id="p1">+1</button><button id="p10">+10</button></div>
   </div>
   <div id="text">Bitte warten …</div>
   <div id="bedienung">
@@ -84,7 +97,7 @@ button.gelb{background:linear-gradient(180deg,#d6a531,#94700f);color:#1d1606}
     Richtung <input type="range" id="simRichtung" min="0" max="400" step="1" value="0"> <span id="simWert">0</span> gon<br>
     Standort <input type="text" id="simLat" value="48.33421"> <input type="text" id="simLon" value="10.89542"> <button id="simSetzen">setzen</button>
   </div>
-  <div id="hinweis">Der Fuchs sendet alle 20 Sekunden kurz. Gerät flach halten, Oberkante nach vorn. Mit dem Ferritstab die Richtung suchen, in der es <b>verstummt</b>. Dann die Stabantenne zuschalten: Jetzt ist vorn laut, hinten leise. Kopfhörer empfohlen.</div>
+  <div id="hinweis">Zuerst die richtige Frequenz einstellen (Skala ziehen oder Tasten). Der Fuchs sendet alle 20 Sekunden kurz. Gerät flach halten, Oberkante nach vorn. Mit dem Ferritstab die Richtung suchen, in der es <b>verstummt</b>. Dann die Stabantenne zuschalten: Jetzt ist vorn laut, hinten leise. Kopfhörer empfohlen.</div>
 </div>
 
 <div id="start">
@@ -112,10 +125,17 @@ let richtungGrad = null, glX = null, glY = null;
 let hf = 0, mitStab = false, tonIndex = 1, notizen = [];
 
 // ---------- Schlüssel ----------
-function schluessel() { return decodeURIComponent(location.hash.slice(1) || "").split("/")[0].toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+// Die eingestellte Frequenz ist der Schlüssel: nur auf der richtigen Frequenz lässt sich die Bake entschlüsseln.
+const F_MIN = 3500, F_MAX = 3800;
+let freq = F_MIN;
+try { const f = +localStorage.getItem("horchFreq"); if (f >= F_MIN && f <= F_MAX) freq = f; } catch (e) {}
+function schluessel() { return "HORCH" + freq; }
 function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+let ladeNr = 0;
 async function bakeLaden() {
-  bake = null; testSchluessel = false;
+  const nr = ++ladeNr;
+  bake = null; testSchluessel = false; letzte = null; glAbstand = null;
+  $("testBake").style.display = "none";
   const k = schluessel();
   if (!k || !window.PEIL_DATEN) return;
   for (const d of window.PEIL_DATEN) {
@@ -124,6 +144,7 @@ async function bakeLaden() {
       const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(d.salz), iterations: d.runden, hash: "SHA-256" },
         basis, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
       const klar = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten))));
+      if (nr !== ladeNr) return;           // inzwischen weitergedreht
       kennung = klar.bake.kennung || kennung;
       testSchluessel = !!klar.test;
       if (testSchluessel) {
@@ -279,14 +300,16 @@ function zeigen() {
   const s = signalDb();
   const sendung = sendetGerade();
   let ziel = 0, txt;
-  if (!schluessel() || (!bake && !testSchluessel)) txt = "Kein Träger auf 3740 kHz. Nur Rauschen.";
-  else if (testSchluessel && !bake) txt = "TEST: Taste FUCHS VERSTECKEN, dann suchen.";
-  else if (!ort) txt = "Warte auf Standort …";
-  else if (s.db <= -90) txt = "Kein Träger. Zu weit weg.";
+  // Auf jeder Frequenz dasselbe Rauschen: den Fuchs bemerkt man erst, wenn er wirklich sendet (Probieren braucht Geduld).
+  const rauschen = freq + " kHz · nur Rauschen. Lauschen …";
+  let empfang = false;
+  if (testSchluessel && !bake) txt = "TEST: Taste FUCHS VERSTECKEN, dann suchen.";
+  else if (!bake || !ort || s.db <= -90) txt = rauschen;
   else if (!sendung) {
     txt = letzte ? `Letzte Sendung: ${letzte.wert.toFixed(1).replace(".", ",")} bei ${letzte.peil} gon (${mitStab ? "Ferrit+Stab" : "Ferrit"}). Warte auf Träger …`
-                 : "Warte auf Träger … Gerät ruhig halten.";
+                 : rauschen;
   } else {
+    empfang = true;
     ziel = Math.max(0, Math.min(10.4, s.db / (SKALA_DB / 10)));
     if (s.d < NAH) txt = ziel >= 10 ? "Nahfeld. HF-Regler zurück, dann umsehen." : "Nahfeld. Der Fuchs ist hier. Umsehen.";
     else if (ziel >= 10) txt = "Vollausschlag. HF-Regler zurückdrehen.";
@@ -296,21 +319,55 @@ function zeigen() {
   if (genauigkeit && genauigkeit > 25 && ort) txt += ` (GPS ±${Math.round(genauigkeit)} m)`;
   zeigerWert += (ziel - zeigerWert) * (ziel > zeigerWert ? 0.5 : 0.3);
   zeigerSetzen("zeiger", zeigerWert);
-  if (sendung) letzte = { wert: Math.min(10, zeigerWert), peil: peil === null ? "---" : peil };
-  if (warSendung && !sendung && navigator.vibrate) navigator.vibrate(15);
-  warSendung = sendung;
+  if (empfang) letzte = { wert: Math.min(10, zeigerWert), peil: peil === null ? "---" : peil };
+  if (warSendung && !empfang && navigator.vibrate) navigator.vibrate(15);
+  warSendung = empfang;
   // Schleppzeiger: zeigt in der Pause, wo der letzte Ausschlag war
   $("schlepp").setAttribute("opacity", !sendung && letzte ? 1 : 0);
   if (letzte) zeigerSetzen("schlepp", letzte.wert);
-  $("lampe").classList.toggle("an", sendung);
-  $("modus").textContent = sendung ? "TRÄGER" : "EMPFANG";
+  $("lampe").classList.toggle("an", empfang);
+  $("modus").textContent = empfang ? "TRÄGER" : "EMPFANG";
   $("text").textContent = txt;
   if (ctx) {
-    const st = sendung ? Math.min(1, ziel / 10) : 0;
+    const st = empfang ? Math.min(1, ziel / 10) : 0;
     tonGain.gain.setTargetAtTime(st * 0.5, ctx.currentTime, 0.06);
     rauschGain.gain.setTargetAtTime(0.05 + 0.16 * (1 - st), ctx.currentTime, 0.1);
   }
 }
+
+// ---------- Abstimmung ----------
+const PX_JE_KHZ = 6;
+(function trommelBauen() {
+  const band = $("trommelBand");
+  for (let f = F_MIN; f <= F_MAX; f++) {
+    const x = (f - F_MIN) * PX_JE_KHZ;
+    const i = document.createElement("i"); i.style.left = x + "px"; i.style.height = f % 10 === 0 ? "14px" : (f % 5 === 0 ? "9px" : "5px");
+    band.appendChild(i);
+    if (f % 20 === 0) { const b = document.createElement("b"); b.style.left = x + "px"; b.textContent = (f / 1000).toFixed(2).replace(".", ","); band.appendChild(b); }
+  }
+})();
+let abstimmTimer = null;
+function freqSetzen(f, sofort) {
+  freq = Math.max(F_MIN, Math.min(F_MAX, Math.round(f)));
+  $("freqWert").textContent = freq + " kHz";
+  $("freqSkala").textContent = freq + " kHz";
+  $("trommelBand").style.transform = `translateX(${-(freq - F_MIN) * PX_JE_KHZ}px)`;
+  try { localStorage.setItem("horchFreq", freq); } catch (e) {}
+  bake = null; testSchluessel = false; letzte = null;
+  clearTimeout(abstimmTimer);
+  abstimmTimer = setTimeout(bakeLaden, sofort ? 0 : 700);   // erst prüfen, wenn der Knopf ruht
+}
+$("m10").onclick = () => freqSetzen(freq - 10);
+$("m1").onclick = () => freqSetzen(freq - 1);
+$("p1").onclick = () => freqSetzen(freq + 1);
+$("p10").onclick = () => freqSetzen(freq + 10);
+(function ziehen() {
+  const t = $("trommel"); let x0 = null, f0 = 0;
+  t.addEventListener("pointerdown", (e) => { x0 = e.clientX; f0 = freq; t.setPointerCapture(e.pointerId); });
+  t.addEventListener("pointermove", (e) => { if (x0 === null) return; freqSetzen(f0 - (e.clientX - x0) / PX_JE_KHZ); });
+  t.addEventListener("pointerup", () => { x0 = null; });
+  t.addEventListener("pointercancel", () => { x0 = null; });
+})();
 
 // ---------- Bedienung ----------
 $("antenne").onclick = () => {
@@ -347,6 +404,7 @@ $("testBake").onclick = () => {
 };
 $("hilfe").onclick = () => {
   alert("HORCH 80 – Kurzanleitung\n\n" +
+    "0. Frequenz einstellen. Nur auf der richtigen Frequenz ist der Fuchs zu hören.\n" +
     "1. Der Fuchs sendet alle 20 s kurz seine Kennung. Nur dann schlägt der Zeiger aus; der rote Schleppzeiger zeigt danach den letzten Wert.\n" +
     "2. Antenne FERRIT: Gerät flach, Oberkante nach vorn, langsam drehen. Wo es verstummt, zeigt die Oberkante auf den Fuchs – oder genau von ihm weg.\n" +
     "3. Antenne FERRIT+STAB: Jetzt ist es vorn laut und hinten leise. So weiß man, welche Seite stimmt.\n" +
@@ -367,8 +425,7 @@ $("los").onclick = async () => {
   setInterval(zeigen, 120);
 };
 if (!window.isSecureContext) $("text").textContent = "Diese Seite braucht https.";
-bakeLaden();
-window.addEventListener("hashchange", () => { glAbstand = null; bakeLaden(); });
+freqSetzen(freq, true);
 </script>
 </body>
 </html>
