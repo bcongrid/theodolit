@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pieper</title>
+<style>
+:root{--gehaeuse:#5d6166;--gehaeuse2:#3c3f43;--lcd:#9fb88a;--lcd2:#7f9a6c;--pixel:#1d2a16;--aus:rgba(29,42,22,.13)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b1c1e;color:#ddd;font-family:system-ui,sans-serif;overscroll-behavior:none}
+body{display:flex;justify-content:center;align-items:flex-start;padding:72px 16px 30px}
+#geraet{width:100%;max-width:380px;background:linear-gradient(160deg,var(--gehaeuse),var(--gehaeuse2));border-radius:26px 26px 34px 34px;
+  padding:18px 18px 22px;box-shadow:0 10px 30px rgba(0,0,0,.7),inset 0 2px 0 rgba(255,255,255,.15),inset 0 -3px 0 rgba(0,0,0,.4);position:relative}
+#antenne{position:absolute;top:-58px;right:44px;width:9px;height:66px;border-radius:5px 5px 2px 2px;background:linear-gradient(90deg,#222,#777 40%,#333);
+  box-shadow:0 0 0 1px #111}
+#antenne::before{content:"";position:absolute;top:-9px;left:-3px;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#888,#111)}
+#marke{display:flex;justify-content:space-between;font:bold 11px/1 "Courier New",monospace;color:#c9ccd0;letter-spacing:.12em;margin-bottom:10px}
+#marke span:last-child{color:#e2b33c}
+#lcd{background:linear-gradient(180deg,var(--lcd),var(--lcd2));border-radius:6px;padding:10px 12px 12px;box-shadow:inset 0 3px 8px rgba(0,0,0,.45),0 0 0 3px #222;
+  font-family:"Courier New",monospace;color:var(--pixel);min-height:186px;position:relative;overflow:hidden}
+#lcd.dunkel{color:var(--aus)}
+.zeile{display:flex;justify-content:space-between;font-size:13px;font-weight:bold}
+#freq{font-size:34px;font-weight:bold;letter-spacing:.04em;margin:6px 0 2px}
+#freq small{font-size:15px}
+#balken{display:flex;gap:3px;height:34px;align-items:flex-end;margin:6px 0 4px}
+#balken i{flex:1;background:var(--aus);border-radius:1px}
+#balken i.an{background:var(--pixel)}
+#skala{display:flex;justify-content:space-between;font-size:10px;font-weight:bold}
+#text{font-size:13px;font-weight:bold;margin-top:8px;min-height:2.6em;line-height:1.3}
+#tasten{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+button{font:bold 12px/1.15 system-ui,sans-serif;color:#e8e8e8;background:linear-gradient(180deg,#4a4d52,#2c2e31);border:0;border-radius:10px;padding:11px 4px;
+  box-shadow:0 3px 0 #151617,inset 0 1px 0 rgba(255,255,255,.18);cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #151617}
+button.gelb{background:linear-gradient(180deg,#d9a72e,#9c7414);color:#1d1606}
+#abschwaecher b{display:block;font-size:15px}
+#hinweis{font-size:12px;color:#9a9da2;margin-top:14px;line-height:1.45}
+#start{position:fixed;inset:0;background:rgba(10,10,12,.94);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;text-align:center;z-index:9}
+#start p{max-width:340px;line-height:1.5;color:#cfd2d6}
+#start button{font-size:16px;padding:14px 28px;margin-top:10px}
+#protokoll{display:none;margin-top:14px;background:#111;border-radius:8px;padding:10px;font:12px/1.5 "Courier New",monospace;color:#b7c9a4}
+#sim{display:none;margin-top:14px;border:1px dashed #777;border-radius:8px;padding:8px;font:12px "Courier New",monospace;color:#bbb}
+#sim input[type=range]{width:100%}
+#sim input[type=text]{width:8.5em;font:inherit}
+</style>
+</head>
+<body>
+<div id="geraet">
+  <div id="antenne"></div>
+  <div id="marke"><span>STRASSER · PIEPER 17</span><span>GWFM</span></div>
+  <div id="lcd" class="dunkel">
+    <div class="zeile"><span id="modus">EMPFANG</span><span id="batt">▮▮▮▯</span></div>
+    <div id="freq">1740<small> kHz</small></div>
+    <div class="zeile"><span>PEILUNG</span><span id="peil">--- gon</span></div>
+    <div id="balken"></div>
+    <div id="skala"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+20</span></div>
+    <div id="text">Bitte warten …</div>
+  </div>
+  <div id="tasten">
+    <button id="abschwaecher">ABSCHW.<b id="dbWert">0 dB</b></button>
+    <button id="notieren">PEILUNG<br>NOTIEREN</button>
+    <button id="ton">TON<br>AN</button>
+    <button id="zeige">NOTIZEN</button>
+    <button id="testBake" class="gelb" style="display:none">BAKE<br>VERSTECKEN</button>
+    <button id="hilfe">?</button>
+  </div>
+  <div id="protokoll"></div>
+  <div id="sim">
+    Prüfmodus (kein Kompass gefunden)<br>
+    Richtung <input type="range" id="simRichtung" min="0" max="400" step="1" value="0"> <span id="simWert">0</span> gon<br>
+    Standort <input type="text" id="simLat" value="48.33421"> <input type="text" id="simLon" value="10.89542"> <button id="simSetzen">setzen</button>
+  </div>
+  <div id="hinweis">Gerät flach halten, Antenne nach vorn, und langsam im Kreis drehen. Wo es am lautesten ist, liegt die Bake. Kopfhörer empfohlen.</div>
+</div>
+
+<div id="start">
+  <p><b>Pieper 17 · Peilempfang</b></p>
+  <p>Das Gerät braucht Standort und Kompass. Auf dem iPhone fragt es einmal nach der Erlaubnis.</p>
+  <button id="los" class="gelb">Einschalten</button>
+</div>
+
+<script src="bake.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const GON = 400 / 360;
+const MISSWEISUNG_GRAD = 4.5;   // Augsburg, magnetisch + 4,5° = rechtweisend (Schätzwert, wie im Theo)
+const GLAETTUNG = 0.2;
+const ABSCHW_STUFEN = [0, 10, 20, 30, 40];
+const NAH = 8;                  // m: darunter Nahfeld, das GPS kann nicht feiner
+const REICHWEITE = 1200;         // m: darüber nur Rauschen
+
+let bake = null, testSchluessel = false, kennung = "N0STR";
+let ort = null, genauigkeit = null, glAbstand = null;
+let richtungGrad = null, glX = null, glY = null;
+let abschw = 0, tonAn = true, notizen = [];
+
+// ---------- Schlüssel ----------
+function schluessel() { return decodeURIComponent(location.hash.slice(1) || "").split("/")[0].toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+async function bakeLaden() {
+  bake = null; testSchluessel = false;
+  const k = schluessel();
+  if (!k || !window.PEIL_DATEN) return;
+  for (const d of window.PEIL_DATEN) {
+    try {
+      const basis = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(d.salz), iterations: d.runden, hash: "SHA-256" },
+        basis, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+      const klar = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(d.iv) }, key, b64(d.daten))));
+      kennung = klar.bake.kennung || kennung;
+      testSchluessel = !!klar.test;
+      if (testSchluessel) {
+        try { const t = JSON.parse(localStorage.getItem("pieperTestBake") || "null"); if (t) bake = t; } catch (e) {}
+      } else bake = { lat: klar.bake.lat, lon: klar.bake.lon };
+      $("testBake").style.display = testSchluessel ? "" : "none";
+      return;
+    } catch (e) { /* nächster Eintrag */ }
+  }
+}
+
+// ---------- Geometrie ----------
+function abstand(a, b) {
+  const R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function peilungGrad(a, b) {
+  const r = Math.PI / 180, d = (b.lon - a.lon) * r;
+  const y = Math.sin(d) * Math.cos(b.lat * r);
+  const x = Math.cos(a.lat * r) * Math.sin(b.lat * r) - Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos(d);
+  return ((Math.atan2(y, x) / r) + 360) % 360;
+}
+function versetzt(p, meter, grad) {
+  const r = Math.PI / 180;
+  return { lat: p.lat + meter * Math.cos(grad * r) / 111320, lon: p.lon + meter * Math.sin(grad * r) / (111320 * Math.cos(p.lat * r)) };
+}
+
+// ---------- Richtung: Oberkante des Geräts (flach gehalten), aufrecht: Blickrichtung ----------
+function geraeteRichtung(a, b, g) {
+  const r = Math.PI / 180, cA = Math.cos(a * r), sA = Math.sin(a * r), cB = Math.cos(b * r), sB = Math.sin(b * r), cG = Math.cos(g * r), sG = Math.sin(g * r);
+  if (Math.abs(cB) > 0.4) return (Math.atan2(-sA * cB, cA * cB) / r + 360) % 360;      // flach: Oberkante
+  const x = -(cA * sG + sA * sB * cG), y = -(sA * sG - cA * sB * cG);                   // aufrecht: Rückseite
+  return (Math.atan2(x, y) / r + 360) % 360;
+}
+function neueRichtung(grad) {
+  grad = (grad + MISSWEISUNG_GRAD + 360) % 360;
+  const r = grad * Math.PI / 180, x = Math.sin(r), y = Math.cos(r);
+  if (glX === null) { glX = x; glY = y; } else { glX += (x - glX) * GLAETTUNG; glY += (y - glY) * GLAETTUNG; }
+  richtungGrad = (Math.atan2(glX, glY) * 180 / Math.PI + 360) % 360;
+}
+let absolutGesehen = false, sensorGesehen = false;
+window.addEventListener("deviceorientationabsolute", (e) => {
+  if (e.alpha === null) return;
+  absolutGesehen = sensorGesehen = true;
+  neueRichtung(geraeteRichtung(e.alpha, e.beta, e.gamma));
+}, true);
+window.addEventListener("deviceorientation", (e) => {
+  if (absolutGesehen) return;
+  if (typeof e.webkitCompassHeading === "number") { sensorGesehen = true; neueRichtung(e.webkitCompassHeading); }
+  else if (e.absolute && e.alpha !== null) { sensorGesehen = true; neueRichtung(geraeteRichtung(e.alpha, e.beta, e.gamma)); }
+}, true);
+
+function standortStarten() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.watchPosition((p) => {
+    if ($("sim").style.display === "block") return;
+    ort = { lat: p.coords.latitude, lon: p.coords.longitude }; genauigkeit = p.coords.accuracy;
+  }, () => { $("text").textContent = "KEIN STANDORT. Ortung erlauben."; }, { enableHighAccuracy: true, maximumAge: 2000 });
+}
+function simAn() {
+  $("sim").style.display = "block";
+  const lesen = () => { const g = +$("simRichtung").value; $("simWert").textContent = g; glX = null; neueRichtung(g / GON - MISSWEISUNG_GRAD); };
+  $("simRichtung").oninput = lesen; lesen();
+  $("simSetzen").onclick = () => { ort = { lat: +$("simLat").value, lon: +$("simLon").value }; genauigkeit = 5; };
+  $("simSetzen").onclick();
+}
+
+// ---------- Signalmodell ----------
+// Feldstärke fällt mit 20·log10(Abstand); Richtantenne mit Vorder- und kleiner Rückkeule.
+function antennenGewinn(diffGrad) {
+  const c = Math.cos(diffGrad * Math.PI / 180);
+  const vorn = Math.pow((1 + c) / 2, 6);
+  return 0.03 + 0.97 * vorn + 0.05 * Math.pow(Math.max(0, -c), 6);
+}
+function signalDb() {
+  if (!bake || !ort) return null;
+  const d = abstand(ort, bake);
+  glAbstand = glAbstand === null ? d : glAbstand + (d - glAbstand) * 0.25;
+  if (glAbstand > REICHWEITE) return { db: -99, d: glAbstand };
+  const feld = 70 - 20 * Math.log10(Math.max(glAbstand, 3) / 10);           // dB über Rauschen
+  const diff = richtungGrad === null ? 180 : Math.abs(((peilungGrad(ort, bake) - richtungGrad) % 360 + 540) % 360 - 180);
+  const nahfeld = glAbstand < NAH ? 1 : 0;                                   // im Nahfeld hilft die Richtung nicht mehr
+  const gewinn = nahfeld ? 1 : antennenGewinn(diff);
+  const flattern = (Math.random() - 0.5) * 2.5;
+  return { db: feld + 20 * Math.log10(gewinn) - ABSCHW_STUFEN[abschw] + flattern, d: glAbstand };
+}
+
+// ---------- Ton: Morsekennung + Rauschen ----------
+let ctx = null, ton = null, tonGain = null, rauschGain = null;
+const MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..", M: "--", N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--..", 0: "-----", 1: ".----", 2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...", 8: "---..", 9: "----." };
+function audioStarten() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ton = ctx.createOscillator(); ton.frequency.value = 720; ton.type = "sine";
+  const tasten = ctx.createGain(); tasten.gain.value = 0;
+  tonGain = ctx.createGain(); tonGain.gain.value = 0;
+  ton.connect(tasten).connect(tonGain).connect(ctx.destination); ton.start();
+  const n = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), dd = n.getChannelData(0);
+  for (let i = 0; i < dd.length; i++) dd[i] = Math.random() * 2 - 1;
+  const rq = ctx.createBufferSource(); rq.buffer = n; rq.loop = true;
+  const filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 1400; filter.Q.value = 0.6;
+  rauschGain = ctx.createGain(); rauschGain.gain.value = 0;
+  rq.connect(filter).connect(rauschGain).connect(ctx.destination); rq.start();
+  // Kennung alle 6 s, 15 WpM
+  const punkt = 0.08;
+  const senden = () => {
+    let t = ctx.currentTime + 0.05;
+    for (const z of (kennung + " " + kennung).split("")) {
+      if (z === " ") { t += punkt * 7; continue; }
+      for (const s of (MORSE[z] || "")) {
+        const lang = s === "-" ? punkt * 3 : punkt;
+        tasten.gain.setValueAtTime(0, t); tasten.gain.linearRampToValueAtTime(1, t + 0.005);
+        tasten.gain.setValueAtTime(1, t + lang); tasten.gain.linearRampToValueAtTime(0, t + lang + 0.005);
+        t += lang + punkt;
+      }
+      t += punkt * 2;
+    }
+  };
+  senden(); setInterval(senden, 6000);
+}
+
+// ---------- Anzeige ----------
+const N_BALKEN = 15;
+for (let i = 0; i < N_BALKEN; i++) { const b = document.createElement("i"); b.style.height = (30 + i * 5) + "%"; $("balken").appendChild(b); }
+function zeigen() {
+  const peil = richtungGrad === null ? null : richtungGrad * GON;
+  $("peil").textContent = peil === null ? "--- gon" : String(Math.round(peil) % 400).padStart(3, "0") + " gon";
+  const s = signalDb();
+  let stufen = 0, txt;
+  if (!schluessel() || (!bake && !testSchluessel)) { txt = "KEIN TRÄGER. Nur Rauschen auf 1740 kHz."; }
+  else if (testSchluessel && !bake) { txt = "TEST: Taste BAKE VERSTECKEN, dann suchen."; }
+  else if (!ort) { txt = "WARTE AUF STANDORT …"; }
+  else if (s.db <= -90) { txt = "KEIN TRÄGER. Zu weit weg."; }
+  else {
+    stufen = Math.max(0, Math.min(N_BALKEN, Math.round(s.db / 4)));   // 4 dB je Strich
+    if (s.d < NAH) txt = stufen >= N_BALKEN ? "NAHFELD. Abschwächer hoch, dann umsehen." : "NAHFELD. Die Bake ist hier. Umsehen.";
+    else if (stufen >= N_BALKEN) txt = "ÜBERSTEUERT. Abschwächer hochdrehen.";
+    else if (stufen <= 1) txt = "SCHWACH. Langsam drehen.";
+    else txt = "TRÄGER " + kennung + ". Auf das Maximum drehen.";
+  }
+  if (genauigkeit && genauigkeit > 25 && ort) txt += " (GPS ±" + Math.round(genauigkeit) + " m)";
+  [...$("balken").children].forEach((b, i) => b.classList.toggle("an", i < stufen));
+  $("text").textContent = txt;
+  if (ctx) {
+    const st = tonAn ? stufen / N_BALKEN : 0;
+    tonGain.gain.setTargetAtTime(st * 0.5, ctx.currentTime, 0.08);
+    rauschGain.gain.setTargetAtTime(tonAn ? 0.05 + 0.18 * (1 - st) : 0, ctx.currentTime, 0.1);
+  }
+}
+
+// ---------- Tasten ----------
+$("abschwaecher").onclick = () => { abschw = (abschw + 1) % ABSCHW_STUFEN.length; $("dbWert").textContent = "−" + ABSCHW_STUFEN[abschw] + " dB"; if (!abschw) $("dbWert").textContent = "0 dB"; };
+$("ton").onclick = () => { tonAn = !tonAn; $("ton").innerHTML = "TON<br>" + (tonAn ? "AN" : "AUS"); };
+$("notieren").onclick = () => {
+  if (richtungGrad === null || !ort) return;
+  const z = new Date();
+  notizen.unshift(`${z.toTimeString().slice(0, 5)}  ${String(Math.round(richtungGrad * GON) % 400).padStart(3, "0")} gon  ${$("balken").querySelectorAll(".an").length} Str.  ${ort.lat.toFixed(5)} ${ort.lon.toFixed(5)}`);
+  notizen = notizen.slice(0, 12);
+  try { localStorage.setItem("pieperNotizen", JSON.stringify(notizen)); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(40);
+  if ($("protokoll").style.display === "block") $("zeige").onclick(), $("zeige").onclick();
+};
+$("zeige").onclick = () => {
+  const p = $("protokoll");
+  if (p.style.display === "block") { p.style.display = "none"; return; }
+  p.innerHTML = notizen.length ? notizen.join("<br>") : "Noch keine Peilung notiert.";
+  p.style.display = "block";
+};
+$("testBake").onclick = () => {
+  if (!ort) return;
+  bake = versetzt(ort, 60 + Math.random() * 60, Math.random() * 360);
+  glAbstand = null;
+  try { localStorage.setItem("pieperTestBake", JSON.stringify(bake)); } catch (e) {}
+  $("text").textContent = "TEST: Bake versteckt, 60–120 m entfernt. Suchen!";
+};
+$("hilfe").onclick = () => {
+  alert("Peilempfang\n\n• Flach halten, Antenne nach vorn, langsam im Kreis drehen.\n• Wo die Striche am höchsten sind, liegt die Bake.\n• Hinten gibt es ein kleines zweites Maximum. Nicht täuschen lassen.\n• Zu laut? Abschwächer hochdrehen.\n• Peilung notieren, ein Stück seitlich gehen, noch einmal peilen. Wo sich die Linien kreuzen …\n• Unter 8 m hilft nur noch Umsehen.");
+};
+
+try { notizen = JSON.parse(localStorage.getItem("pieperNotizen") || "[]"); } catch (e) {}
+
+$("los").onclick = async () => {
+  try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+  $("start").style.display = "none";
+  $("lcd").classList.remove("dunkel");
+  try { audioStarten(); } catch (e) {}
+  standortStarten();
+  setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
+  setInterval(zeigen, 250);
+};
+if (!window.isSecureContext) $("text").textContent = "Diese Seite braucht https.";
+bakeLaden();
+window.addEventListener("hashchange", () => { glAbstand = null; bakeLaden(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+// erzeugt von werkzeuge/peiler_verschluesseln.mjs, nicht von Hand ändern
+window.PEIL_DATEN = [{"salz":"NKSnYvIkChHRL9Nwaey3Fg==","iv":"gmr+ZDFjrDwynDJi","daten":"H0I48S4/gz4yCsdOE3ZQ4ZK3mV65mU41Tg3h4MYUGe5pjqENMdUaKEZaQFBiaYWBzYePQIZ7bnxMsB/lLXpEw77WDLtXqK1lvTJPl4kWE/qYFq4e5orjA/s=","runden":200000},{"salz":"uiOM3Sg2NPUw92kZ9pVYPA==","iv":"3uokZRMOG8T+NN3c","daten":"HWAJQUaKQuaWow7lJ2b83j1ha2Um27xnJPEwBfccviGSBJfiDdn6nGm7GvpF3EKh1k8e8YjyYNdqAKIdWCEL5mzTwhvFVNwu","runden":200000}];
