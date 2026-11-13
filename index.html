@@ -321,7 +321,8 @@ function neueRichtung(grad, hoehe, q) {
   const r = grad * Math.PI / 180, x = Math.sin(r), y = Math.cos(r);
   if (glX === null) { glX = x; glY = y; } else { glX += (x - glX) * GLAETTUNG; glY += (y - glY) * GLAETTUNG; }
   richtungGrad = (Math.atan2(glX, glY) * 180 / Math.PI + 360) % 360;
-  hoeheGrad = hoehe; quelle = q;
+  hoeheGrad = (hoeheGrad === null || hoehe === null || hoehe === undefined) ? hoehe : hoeheGrad + (hoehe - hoeheGrad) * GLAETTUNG;
+  quelle = q;
 }
 function rechtweisend(magnetisch) { return (magnetisch + MISSWEISUNG_GRAD + 360) % 360; }
 
@@ -374,8 +375,9 @@ function zoomSetzen(z) {
   zoom = Math.max(zoomMin, Math.min(zoomMax, z));
   if (optisch && spur) { spur.applyConstraints({ advanced: [{ zoom }] }).catch(() => {}); $("video").style.transform = ""; }
   else {
-    const glas = document.querySelector('#okular circle[r="27"]').getBoundingClientRect();
-    $("video").style.transformOrigin = `${glas.left + glas.width / 2}px ${glas.top + glas.height / 2}px`;
+    const glas = document.querySelector('#okular circle[r="27"][fill="url(#glas)"]').getBoundingClientRect();
+    const v = $("video");   // Ursprung relativ zum Videoelement (es ist nach oben verschoben)
+    v.style.transformOrigin = `${glas.left + glas.width / 2 - v.offsetLeft}px ${glas.top + glas.height / 2 - v.offsetTop}px`;
     $("video").style.transform = `scale(${zoom})`;
   }
   $("zoomwert").textContent = "×" + zoom.toFixed(1).replace(".", ",") + (optisch ? "" : " dig.");
@@ -483,7 +485,38 @@ function lotZeichnen(zeit) {
   $("lot").setAttribute("opacity", lotSichtbar.toFixed(2));
 }
 // ---------- Polygonzug: rot-weiße Fluchtstäbe, nur der nächste, klein in der Ferne ----------
-const FELD_GRAD = 44;        // Sehfeld über den Glasdurchmesser (54 Einheiten) bei ×1
+const FELD_GRAD = 44;        // Ersatzwert: Sehfeld über den Glasdurchmesser (54 Einheiten) bei ×1, falls kein Videobild
+const KAMERA_LANGSEITE_GRAD = 66;   // typische Handy-Hauptkamera (26 mm KB): Sehfeld über die lange Bildseite
+// Rechnet Winkel in Okular-Einheiten um. Die Kamera schaut durch die Bildschirmmitte, das Glas sitzt höher:
+// dx/dy = Lage der optischen Achse relativ zur Glasmitte (Einheiten). Ohne diese Verschiebung „schweben“ Stäbe.
+function abbildung() {
+  const v = $("video"), glas = document.querySelector('#okular circle[r="27"][fill="url(#glas)"]').getBoundingClientRect();
+  const pxJeEinheit = glas.width / 54;
+  const vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh || !pxJeEinheit) return { proGrad: 54 / (FELD_GRAD / zoom), dx: 0, dy: 0 };
+  const W = v.offsetWidth, H = v.offsetHeight;                          // Layout-Maße (ohne Zoom-Transform)
+  const s = Math.max(W / vw, H / vh);                                   // object-fit: cover
+  const pxJeGrad = s * Math.max(vw, vh) / KAMERA_LANGSEITE_GRAD;        // Bildschirm-Pixel je Grad bei ×1
+  const gx = glas.left + glas.width / 2, gy = glas.top + glas.height / 2;
+  const cx = v.offsetLeft + W / 2, cy = v.offsetTop + H / 2;            // optische Achse
+  const dig = optisch ? 1 : zoom;                                       // digitaler Zoom skaliert um die Glasmitte
+  return {
+    proGrad: pxJeGrad * zoom / pxJeEinheit,
+    dx: (cx - gx) * dig / pxJeEinheit,
+    dy: (cy - gy) * dig / pxJeEinheit,
+  };
+}
+// Kamerabild so legen, dass seine Mitte (optische Achse) in der Glasmitte liegt und es trotzdem den ganzen Schirm deckt.
+function videoAusrichten() {
+  const v = $("video"), glas = document.querySelector('#okular circle[r="27"][fill="url(#glas)"]').getBoundingClientRect();
+  const H = window.innerHeight, gy = glas.top + glas.height / 2;
+  if (!glas.width) return;
+  const halb = Math.max(gy, H - gy);
+  v.style.inset = "auto"; v.style.left = "0"; v.style.width = "100%";
+  v.style.top = (gy - halb) + "px"; v.style.height = (2 * halb) + "px";
+}
+window.addEventListener("resize", () => { videoAusrichten(); if (typeof zoomSetzen === "function") zoomSetzen(zoom); });
+window.addEventListener("orientationchange", () => setTimeout(() => { videoAusrichten(); zoomSetzen(zoom); }, 300));
 const STAB_HOEHE = 2;        // m, echter Fluchtstab
 const AUGHOEHE = 1.5;        // m
 const STAB_MIN = 1.4;        // Einheiten: kleiner wird er nicht gezeichnet (dann hilft nur Zoomen)
@@ -546,12 +579,12 @@ function zugZeichnen() {
   }
   if (zugIndex >= zug.length) { ebene.setAttribute("opacity", "0"); return "ende"; }
   const ziel = zug[zugIndex], d = abstand(ort, ziel);
-  const proGrad = 54 / (FELD_GRAD / zoom);
+  const { proGrad, dx, dy } = abbildung();
   let diff = ((peilungZu(ort, ziel) / GON - richtungGrad) % 360 + 540) % 360 - 180;   // Grad, + = rechts
-  const xSoll = diff * proGrad;
+  const xSoll = dx + diff * proGrad;
   stabX = stabX === null ? xSoll : stabX + (xSoll - stabX) * 0.2;
   const h = Math.atan(STAB_HOEHE / d) * 180 / Math.PI * proGrad;
-  const fuss = ((hoeheGrad || 0) + Math.atan(AUGHOEHE / d) * 180 / Math.PI) * proGrad;
+  const fuss = dy + ((hoeheGrad || 0) + Math.atan(AUGHOEHE / d) * 180 / Math.PI) * proGrad;   // Fuß auf dem Boden
   const gDa = gImOkular(performance.now(), d);
   const sichtbar = !gDa && h >= STAB_MIN && Math.abs(stabX) < 26;
   $("stab").setAttribute("opacity", sichtbar ? "1" : "0");
@@ -574,11 +607,11 @@ function btxSchirmZeichnen() {
   if (!zug || !schluesselOk || !ort || richtungGrad === null || zugIndex < zug.length) { g.setAttribute("opacity", "0"); return; }
   const ziel = zug[zug.length - 1], d = Math.max(1.5, abstand(ort, ziel));
   if (d > BTX_SICHT) { g.setAttribute("opacity", "0"); return; }
-  const proGrad = 54 / (FELD_GRAD / zoom);
+  const { proGrad, dx, dy } = abbildung();
   const diff = ((peilungZu(ort, ziel) / GON - richtungGrad) % 360 + 540) % 360 - 180;
-  const xSoll = diff * proGrad;
+  const xSoll = dx + diff * proGrad;
   btxX = btxX === null ? xSoll : btxX + (xSoll - btxX) * 0.15;
-  const y = ((hoeheGrad || 0) + Math.atan((AUGHOEHE - BTX_HOEHE) / d) * 180 / Math.PI) * proGrad;
+  const y = dy + ((hoeheGrad || 0) + Math.atan((AUGHOEHE - BTX_HOEHE) / d) * 180 / Math.PI) * proGrad;
   const breite = Math.min(34, Math.atan(BTX_BREITE / d) * 180 / Math.PI * proGrad);
   const flackern = 0.82 + 0.08 * Math.sin(performance.now() / 70) * (Math.random() < 0.05 ? 3 : 1);
   g.setAttribute("transform", `translate(${btxX.toFixed(2)},${y.toFixed(2)}) scale(${(breite / 10).toFixed(3)})`);
@@ -587,11 +620,11 @@ function btxSchirmZeichnen() {
 function hundZeichnen() {
   const g = $("hund");
   if (!messhund || !schluesselOk || !ort || richtungGrad === null) { g.setAttribute("opacity", "0"); $("hundL").setAttribute("opacity", "0"); $("hundR").setAttribute("opacity", "0"); return; }
-  const proGrad = 54 / (FELD_GRAD / zoom);
+  const { proGrad, dx, dy } = abbildung();
   const diff = ((messhund.richtung_gon / GON - richtungGrad) % 360 + 540) % 360 - 180;   // er läuft immer in Richtung der Anweisung
-  const xSoll = diff * proGrad;
+  const xSoll = dx + diff * proGrad;
   hundX = hundX === null ? xSoll : hundX + (xSoll - hundX) * 0.15;
-  const fuss = ((hoeheGrad || 0) + Math.atan(AUGHOEHE / HUND_ABSTAND) * 180 / Math.PI) * proGrad;   // auf dem Boden: nur schräg nach unten sichtbar
+  const fuss = dy + ((hoeheGrad || 0) + Math.atan(AUGHOEHE / HUND_ABSTAND) * 180 / Math.PI) * proGrad;   // auf dem Boden: nur schräg nach unten sichtbar
   const groesse = Math.atan(HUND_HOEHE / HUND_ABSTAND) * 180 / Math.PI * proGrad / 10;
   g.setAttribute("transform", `translate(${hundX.toFixed(2)},${fuss.toFixed(2)}) scale(${groesse.toFixed(3)})`);
   g.setAttribute("opacity", "1");
@@ -690,7 +723,7 @@ $("los").onclick = async () => {
   try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
   $("start").style.display = "none";
   try { gStimme.muted = true; await gStimme.play(); gStimme.pause(); gStimme.currentTime = 0; gStimme.muted = false; } catch (e) { gStimme.muted = false; }
-  kameraStarten(); standortStarten();
+  videoAusrichten(); kameraStarten(); standortStarten();
   setTimeout(() => { if (!sensorGesehen) simAn(); }, 2500);
   requestAnimationFrame(tick);
 };
